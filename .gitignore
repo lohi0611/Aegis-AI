@@ -1,0 +1,28 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Virtual Environments
+venv/
+ENV/
+
+# Large Model Weights (Keep if you want to push to git, but recommended to ignore if huge)
+# *.pt
+
+# Project Specific
+snapshots/
+violations.csv
+uploaded_video.mp4
+alert_log.csv
+alert_summary.txt
+
+# Node / System
+node_modules/
+.DS_Store
+Thumbs.db
+
+# OS files
+.env
+.env.local
