@@ -1,6 +1,6 @@
 # 🛡️ Aegis: AI-Powered Workplace Compliance Monitor
 
-**SafetyEye** is a state-of-the-art computer vision system designed to automate safety audits in industrial and construction environments. Using high-speed object detection, the system ensures that every person on-site is protected by the required Personal Protective Equipment (PPE).
+**Aegis AI** is a state-of-the-art computer vision system designed to automate safety audits in industrial and construction environments. Using high-speed object detection, the system ensures that every person on-site is protected by the required Personal Protective Equipment (PPE).
 
 ---
 
@@ -17,7 +17,7 @@
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/YourUsername/Safety-Monitor.git
+    git clone https://github.com/lohi0611/Safety-Monitor.git
     cd Safety-Monitor
     ```
 
