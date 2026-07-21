@@ -17,8 +17,8 @@
 
 1.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/lohi0611/Safety-Monitor.git
-    cd Safety-Monitor
+    git clone https://github.com/lohi0611/Aegis-AI.git
+    cd Aegis-AI
     ```
 
 2.  **Initialize Virtual Environment**:
