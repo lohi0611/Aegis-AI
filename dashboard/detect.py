@@ -38,9 +38,12 @@ class PPEDetector:
             "Vehicle"
         ]
 
-    def detect(self, frame):
+    def detect(self, frame, line_width=None):
         results = self.model.predict(frame, conf=self.conf, verbose=False)
-        annotated = results[0].plot()
+        if line_width is not None:
+            annotated = results[0].plot(line_width=line_width)
+        else:
+            annotated = results[0].plot()
 
         detections = []
         boxes = results[0].boxes
