@@ -31,7 +31,19 @@ apply_custom_css()
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 
-LOG_CSV = os.path.join(project_root, "violations.csv")
+# Ensure LOG_CSV resolves to project root violations.csv
+def resolve_log_csv():
+    candidates = [
+        os.path.join(project_root, "violations.csv"),
+        os.path.join(current_dir, "violations.csv"),
+        "violations.csv"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(project_root, "violations.csv")
+
+LOG_CSV = resolve_log_csv()
 SNAP_DIR = os.path.join(project_root, "snapshots")
 os.makedirs(SNAP_DIR, exist_ok=True)
 
@@ -297,8 +309,8 @@ elif st.session_state.running:
             total_frames += 1
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
-            # Detect (passing our custom line width)
-            annotated, detections = detector.detect(rgb, line_width=line_thickness)
+            # Detect (passing our custom line width and alert classes)
+            annotated, detections = detector.detect(rgb, line_width=line_thickness, alert_classes=alert_classes)
             
             # Filter detections based on selected alert classes
             frame_violations = 0
@@ -321,7 +333,7 @@ elif st.session_state.running:
                     worker_id = random.choice(workers_list)
                     
                     row = [ts, worker_id, class_name, d["confidence"], 
-                           int(d["bbox"]["x1"]), int(d["bbox"]["y1"]), int(d["bbox"]["x2"]), int(d["bbox"]["y2"]), 
+                           int(d["bbox"][0]), int(d["bbox"][1]), int(d["bbox"][2]), int(d["bbox"][3]), 
                            snap_path, "Violation"]
                     rows_to_save.append(row)
                     st.session_state.session_rows.append(row)

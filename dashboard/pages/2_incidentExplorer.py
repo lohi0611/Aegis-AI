@@ -20,8 +20,22 @@ apply_custom_css()
 
 # ===================== ABSOLUTE PATH RESOLUTION =====================
 current_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.dirname(current_dir)
-LOG_CSV = os.path.join(project_root, "violations.csv")
+dashboard_dir = os.path.dirname(current_dir)
+project_root = os.path.dirname(dashboard_dir)
+
+def resolve_log_csv():
+    candidates = [
+        os.path.join(project_root, "violations.csv"),
+        os.path.join(dashboard_dir, "violations.csv"),
+        os.path.join(current_dir, "violations.csv"),
+        "violations.csv"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(project_root, "violations.csv")
+
+LOG_CSV = resolve_log_csv()
 
 # Resolve image paths dynamically
 def get_image_path(stored_path):
