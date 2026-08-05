@@ -166,10 +166,9 @@ def draw_empty_metrics():
         template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(showgrid=False, visible=False), yaxis=dict(showgrid=False, title="FPS")
     )
-    metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+    metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key="empty_metrics_chart")
     logs_ph.info("Awaiting sensor stream activation...")
 
-draw_empty_metrics()
 
 # ===================== DETECTION ENGINE =====================
 if st.session_state.running:
@@ -295,7 +294,7 @@ if st.session_state.running:
                     xaxis=dict(showgrid=False, visible=False), 
                     yaxis=dict(showgrid=False, title="FPS", titlefont=dict(color="#58a6ff"), tickfont=dict(color="#58a6ff"))
                 )
-                metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"fps_chart_{total_frames}")
 
                 # Feed Update (Incident list)
                 with feed_ph:

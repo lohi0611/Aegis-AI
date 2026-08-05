@@ -181,7 +181,7 @@ with col_c1:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
     )
-    st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False})
+    st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False}, key="gauge_chart")
 
 with col_c2:
     st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">⚠️ Category Breakdown</h3>', unsafe_allow_html=True)
@@ -217,7 +217,7 @@ with col_c2:
             showlegend=False,
             template="plotly_dark"
         )
-        st.plotly_chart(fig_donut, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_donut, use_container_width=True, config={'displayModeBar': False}, key="donut_chart")
     else:
         st.info("No data available for breakdown.")
 
@@ -261,7 +261,7 @@ with col_h1:
             template="plotly_dark",
             coloraxis_showscale=False
         )
-        st.plotly_chart(fig_heat, use_container_width=True, config={'displayModeBar': False})
+        st.plotly_chart(fig_heat, use_container_width=True, config={'displayModeBar': False}, key="heat_chart")
     else:
         st.info("No data available for heatmap.")
 
@@ -293,7 +293,7 @@ with col_h2:
                 coloraxis_showscale=False,
                 yaxis={'categoryorder': 'total ascending'}
             )
-            st.plotly_chart(fig_bar, use_container_width=True, config={'displayModeBar': False})
+            st.plotly_chart(fig_bar, use_container_width=True, config={'displayModeBar': False}, key="bar_chart")
         else:
             st.success("No active violations logged for any workers!")
     else:
