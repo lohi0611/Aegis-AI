@@ -39,7 +39,9 @@ os.makedirs(SNAP_DIR, exist_ok=True)
 sample_video_paths = [
     os.path.join(current_dir, "uploaded_video.mp4"),
     os.path.join(project_root, "uploaded_video.mp4"),
-    "uploaded_video.mp4"
+    os.path.join(project_root, "assets", "finalTest.mp4"),
+    os.path.join(project_root, "infosys", "dataset", "source_files", "source_files", "hardhat.mp4"),
+    os.path.join(project_root, "infosys", "dataset", "source_files", "source_files", "JapanPPE.mp4"),
 ]
 sample_video = None
 for p in sample_video_paths:
@@ -172,30 +174,43 @@ def draw_empty_metrics():
 if st.session_state.running:
     detector = PPEDetector(conf=confidence_slider)
     
-    # Resolve Source path
+    # Resolve Source path smoothly
     cap_src = None
-    if video_source == "Webcam (0)":
-        cap_src = 0
-    elif video_source == "Sample Video":
+    if video_source == "Sample Video" and sample_video:
         cap_src = sample_video
     elif uploaded_file:
         tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]).name
         with open(tmp_file, "wb") as f:
             f.write(uploaded_file.read())
         cap_src = tmp_file
-    else:
-        st.warning("⚠️ PROMPT REQUIRED: Please define a valid intelligence source.")
-        st.session_state.running = False
-        st.rerun()
+    elif video_source == "Webcam (0)":
+        cap_src = 0
+    
+    # Fallback if source is missing
+    if cap_src is None:
+        if sample_video:
+            cap_src = sample_video
+            st.info("ℹ️ Using sample video stream for demonstration.")
+        else:
+            st.warning("⚠️ Please upload a video file or select a valid video source.")
+            st.session_state.running = False
+            st.stop()
 
-    # Open Capture
+    # Open Video Capture
+    cap = None
     if isinstance(cap_src, int) and cap_src == 0 and use_dshow:
         cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
     else:
         cap = cv2.VideoCapture(cap_src)
     
-    if not cap.isOpened():
-        st.error("🚨 SENSOR FAILURE: Unable to access the optic stream.")
+    # Fallback if capture fails (e.g. webcam not found on cloud server)
+    if not cap or not cap.isOpened():
+        if cap_src != sample_video and sample_video:
+            st.info("ℹ️ Local camera hardware not accessible on cloud server. Switching to sample video feed.")
+            cap = cv2.VideoCapture(sample_video)
+        
+    if not cap or not cap.isOpened():
+        st.error("🚨 Unable to access camera feed or video stream.")
         st.session_state.running = False
         st.stop()
 
