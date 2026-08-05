@@ -1,7 +1,7 @@
 streamlit
 ultralytics
 torch
-opencv-python-headless
+opencv-python
 gdown
 numpy
 pandas
