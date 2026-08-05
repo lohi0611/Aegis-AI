@@ -38,12 +38,12 @@ class PPEDetector:
             "Vehicle"
         ]
 
-    def detect(self, frame, line_width=None):
+    def detect(self, frame, line_width=2, alert_classes=None):
         results = self.model.predict(frame, conf=self.conf, verbose=False)
         if line_width is not None:
-            annotated = results[0].plot(line_width=line_width)
+            annotated = results[0].plot(line_width=line_width, labels=True, conf=True)
         else:
-            annotated = results[0].plot()
+            annotated = results[0].plot(labels=True, conf=True)
 
         detections = []
         boxes = results[0].boxes
@@ -52,18 +52,17 @@ class PPEDetector:
             cls_idx = int(box.cls[0])
             class_name = self.model.names[cls_idx]
 
+            # Filter if alert_classes filter is active
+            if alert_classes and class_name not in alert_classes:
+                continue
+
             conf = float(box.conf[0])
             x1, y1, x2, y2 = box.xyxy[0].tolist()
 
             detections.append({
                 "class_name": class_name,
                 "confidence": round(conf, 2),
-                "bbox": {
-                    "x1": x1,
-                    "y1": y1,
-                    "x2": x2,
-                    "y2": y2
-                }
+                "bbox": [int(x1), int(y1), int(x2), int(y2)]
             })
 
         return annotated, detections

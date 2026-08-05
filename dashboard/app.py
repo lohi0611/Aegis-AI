@@ -77,7 +77,7 @@ with st.sidebar:
     
     video_source = st.selectbox("Video Input Source", sources)
     
-    confidence_slider = st.slider("Detection Confidence Threshold", 0.1, 1.0, 0.45, step=0.01)
+    confidence_slider = st.slider("Detection Confidence Threshold", 0.1, 1.0, 0.25, step=0.01)
     line_thickness = st.slider("Bounding Box Thickness", 1, 5, 2)
     
     alert_classes = st.multiselect(
@@ -180,7 +180,7 @@ if video_source == "Laptop Camera (Browser)":
     if img_file:
         bytes_data = img_file.getvalue()
         frame = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-        annotated, detections = detector.detect(frame, line_thickness=line_thickness, alert_classes=alert_classes)
+        annotated, detections = detector.detect(frame, line_width=line_thickness, alert_classes=alert_classes)
         
         # Display annotated result
         video_ph.image(annotated, channels="BGR", use_container_width=True)
@@ -195,31 +195,43 @@ if video_source == "Laptop Camera (Browser)":
             with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#10b981", alert_type="success")
         with col_k4: kpi_card("Sensor Latency", "LIVE", "⚡", "#06b6d4")
         
-        # Log breaches to session and CSV if any detected
+        # Log breaches to session, incident stream, and CSV if any detected
         if frame_violations > 0:
             workers_list = ["WKR_101", "WKR_102", "WKR_103", "WKR_104"]
-            for det in detections:
-                box = det["box"]
-                cls_name = det["name"]
-                conf_val = det["confidence"]
-                w_id = random.choice(workers_list)
-                timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
-                # Save snapshot
-                snap_filename = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-                snap_full_path = os.path.join(SNAP_DIR, snap_filename)
-                cv2.imwrite(snap_full_path, annotated)
-                
-                row = [timestamp_str, w_id, cls_name, round(conf_val, 2), int(box[0]), int(box[1]), int(box[2]), int(box[3]), f"snapshots/{snap_filename}", "Violation"]
-                
-                if "session_rows" not in st.session_state:
-                    st.session_state.session_rows = []
-                st.session_state.session_rows.append(row)
-                
-                # Append to CSV
-                with open(LOG_CSV, "a", newline="") as f:
-                    writer = csv.writer(f)
-                    writer.writerow(row)
+            with feed_ph:
+                for det in detections:
+                    box = det["bbox"]
+                    cls_name = det["class_name"]
+                    conf_val = det["confidence"]
+                    w_id = random.choice(workers_list)
+                    timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    # Save snapshot
+                    snap_filename = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                    snap_full_path = os.path.join(SNAP_DIR, snap_filename)
+                    cv2.imwrite(snap_full_path, annotated)
+                    
+                    snap_rel_path = f"snapshots/{snap_filename}"
+                    row = [timestamp_str, w_id, cls_name, round(conf_val, 2), box[0], box[1], box[2], box[3], snap_rel_path, "Violation"]
+                    
+                    if "session_rows" not in st.session_state:
+                        st.session_state.session_rows = []
+                    st.session_state.session_rows.append(row)
+                    
+                    # Draw Incident Card in Incident Stream feed
+                    draw_incident_card(
+                        timestamp=timestamp_str.split(" ")[1],
+                        breach_type=cls_name,
+                        worker_id=w_id,
+                        confidence=conf_val,
+                        snap_path=snap_rel_path,
+                        status="Violation"
+                    )
+                    
+                    # Append to CSV
+                    with open(LOG_CSV, "a", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(row)
 
 elif st.session_state.running:
     detector = PPEDetector(conf=confidence_slider)
