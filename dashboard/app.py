@@ -70,10 +70,10 @@ with st.sidebar:
     st.markdown("### ⚙️ CONFIGURATION")
     
     # Input Sources
-    sources = []
+    sources = ["Laptop Camera (Browser)"]
     if sample_video:
         sources.append("Sample Video")
-    sources.extend(["Video File", "Webcam (0)"])
+    sources.extend(["Upload Video File", "Local Webcam (OpenCV)"])
     
     video_source = st.selectbox("Video Input Source", sources)
     
@@ -171,7 +171,57 @@ def draw_empty_metrics():
 
 
 # ===================== DETECTION ENGINE =====================
-if st.session_state.running:
+if video_source == "Laptop Camera (Browser)":
+    detector = PPEDetector(conf=confidence_slider)
+    with video_ph.container():
+        st.markdown('<p style="color:#60a5fa; font-weight:600; margin-bottom:8px;">📷 Live Browser Camera Input</p>', unsafe_allow_html=True)
+        img_file = st.camera_input("Snapshot from Laptop Camera", key="laptop_camera_widget")
+    
+    if img_file:
+        bytes_data = img_file.getvalue()
+        frame = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
+        annotated, detections = detector.detect(frame, line_thickness=line_thickness, alert_classes=alert_classes)
+        
+        # Display annotated result
+        video_ph.image(annotated, channels="BGR", use_container_width=True)
+        
+        # Update KPIs
+        frame_violations = len(detections)
+        with col_k1: kpi_card("Scanned Frames", "1", "👁️", "#3b82f6")
+        with col_k2: kpi_card("Total Breaches", str(frame_violations), "🚨", "#ef4444")
+        if frame_violations > 0:
+            with col_k3: kpi_card("Current Threat Level", f"{frame_violations} BREACHES", "🔥", "#ef4444", alert_type="danger")
+        else:
+            with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#10b981", alert_type="success")
+        with col_k4: kpi_card("Sensor Latency", "LIVE", "⚡", "#06b6d4")
+        
+        # Log breaches to session and CSV if any detected
+        if frame_violations > 0:
+            workers_list = ["WKR_101", "WKR_102", "WKR_103", "WKR_104"]
+            for det in detections:
+                box = det["box"]
+                cls_name = det["name"]
+                conf_val = det["confidence"]
+                w_id = random.choice(workers_list)
+                timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                # Save snapshot
+                snap_filename = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                snap_full_path = os.path.join(SNAP_DIR, snap_filename)
+                cv2.imwrite(snap_full_path, annotated)
+                
+                row = [timestamp_str, w_id, cls_name, round(conf_val, 2), int(box[0]), int(box[1]), int(box[2]), int(box[3]), f"snapshots/{snap_filename}", "Violation"]
+                
+                if "session_rows" not in st.session_state:
+                    st.session_state.session_rows = []
+                st.session_state.session_rows.append(row)
+                
+                # Append to CSV
+                with open(LOG_CSV, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(row)
+
+elif st.session_state.running:
     detector = PPEDetector(conf=confidence_slider)
     
     # Resolve Source path smoothly
@@ -183,7 +233,7 @@ if st.session_state.running:
         with open(tmp_file, "wb") as f:
             f.write(uploaded_file.read())
         cap_src = tmp_file
-    elif video_source == "Webcam (0)":
+    elif video_source == "Local Webcam (OpenCV)":
         cap_src = 0
     
     # Fallback if source is missing
@@ -206,11 +256,11 @@ if st.session_state.running:
     # Fallback if capture fails (e.g. webcam not found on cloud server)
     if not cap or not cap.isOpened():
         if cap_src != sample_video and sample_video:
-            st.info("ℹ️ Local camera hardware not accessible on cloud server. Switching to sample video feed.")
+            st.info("ℹ️ Local OpenCV webcam not accessible on cloud server. Select 'Laptop Camera (Browser)' in sidebar or use sample video.")
             cap = cv2.VideoCapture(sample_video)
         
     if not cap or not cap.isOpened():
-        st.error("🚨 Unable to access camera feed or video stream.")
+        st.error("🚨 Unable to access video stream.")
         st.session_state.running = False
         st.stop()
 
