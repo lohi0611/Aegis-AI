@@ -59,24 +59,24 @@ if not os.path.isfile(LOG_CSV):
 
 # ===================== SIDEBAR =====================
 with st.sidebar:
-    st.markdown('<div style="text-align: center; margin-bottom: 20px;"><span style="font-size: 2.2rem; filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.35));">🛡️</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1.3rem; font-weight: 800; color: #ffffff; text-align: center; letter-spacing: 2px; margin-bottom: 5px;">AEGIS-AI</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px;">Tactical Monitoring Node: **FAB-NORTH-01**</div>', unsafe_allow_html=True)
+    st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 2.2rem;">🛡️</span></div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; text-align: center; letter-spacing: 1px; margin-bottom: 4px;">AegisAI Safety</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size: 0.75rem; color: #9ca3af; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px;">Workplace Monitoring Station</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
-    st.markdown("### 📡 SENSOR CONFIGURATION")
+    st.markdown("### ⚙️ CONFIGURATION")
     
-    # Intelligence Sources
+    # Input Sources
     sources = []
     if sample_video:
         sources.append("Sample Video")
     sources.extend(["Video File", "Webcam (0)"])
     
-    video_source = st.selectbox("Intelligence Source", sources)
+    video_source = st.selectbox("Video Input Source", sources)
     
-    confidence_slider = st.slider("Neural Confidence Threshold", 0.1, 1.0, 0.45, step=0.01)
-    line_thickness = st.slider("Annotation Line Width", 1, 5, 2)
+    confidence_slider = st.slider("Detection Confidence Threshold", 0.1, 1.0, 0.45, step=0.01)
+    line_thickness = st.slider("Bounding Box Thickness", 1, 5, 2)
     
     alert_classes = st.multiselect(
         "Violations To Monitor",
@@ -86,12 +86,12 @@ with st.sidebar:
     
     uploaded_file = None
     if video_source == "Video File":
-        uploaded_file = st.file_uploader("Upload Sector Feed", type=["mp4", "avi", "mov"])
+        uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "avi", "mov"])
     
     use_dshow = st.checkbox("Enhanced Hardware Access", value=True)
     
     st.markdown("---")
-    st.markdown("### 🚦 SYSTEM CONTROLS")
+    st.markdown("### 🎮 CONTROL PANEL")
     
     if "running" not in st.session_state: 
         st.session_state.running = False
@@ -111,8 +111,8 @@ with st.sidebar:
     navigation_tip()
 
 # ===================== MAIN HEADER =====================
-mission_control_header("AEGIS <span style='color:#58a6ff;'>MISSION CONTROL</span>", 
-                      "OPERATIONAL SAFETY INTELLIGENCE & REAL-TIME COMPLIANCE AUDITING")
+mission_control_header("AEGIS AI <span style='color:#3b82f6;'>SAFETY CONTROL</span>", 
+                      "REAL-TIME PPE COMPLIANCE SURVEILLANCE & INCIDENT MONITORING")
 
 # ===================== KPI BANNER =====================
 col_k1, col_k2, col_k3, col_k4 = st.columns(4)
@@ -125,12 +125,10 @@ with col_k4: kpi_fps = st.empty()
 
 # Helper to load initial default stats
 def draw_empty_kpis():
-    with col_k1: kpi_card("Scanned Frames", "0", "👁️", "#58a6ff")
-    with col_k2: kpi_card("Total Breaches", "0", "🚨", "#f85149")
-    with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#56d364", alert_type="success")
-    with col_k4: kpi_card("Sensor Latency", "STANDBY", "⚡", "#00d4ff")
-
-draw_empty_kpis()
+    with col_k1: kpi_card("Scanned Frames", "0", "👁️", "#3b82f6")
+    with col_k2: kpi_card("Total Breaches", "0", "🚨", "#ef4444")
+    with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#10b981", alert_type="success")
+    with col_k4: kpi_card("Sensor Latency", "STANDBY", "⚡", "#06b6d4")
 
 st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 
@@ -138,11 +136,11 @@ st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 col_left, col_right = st.columns([2.5, 1.2])
 
 with col_left:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">💠 Live Optic Array</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#3b82f6;">📹 Live Feed Stream</h3>', unsafe_allow_html=True)
     video_ph = st.empty()
 
 with col_right:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">🚨 Incident Stream</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#3b82f6;">📋 Recent Alerts</h3>', unsafe_allow_html=True)
     # Scrollable container for incident stream
     feed_ph = st.container()
 
@@ -329,13 +327,13 @@ else:
     # Standby Mode UI presentation
     draw_empty_kpis()
     
-    # Standby video placeholder: show a cool glowing interface or graphic
+    # Standby video placeholder: show a clean professional interface
     video_ph.markdown("""
-    <div style="background-color:#0b0f19; border: 1px dashed rgba(88,166,255,0.2); border-radius:16px; padding: 80px 20px; text-align:center; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);">
-        <div style="font-size:4rem; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(88,166,255,0.3));">📡</div>
-        <h3 style="color:#58a6ff; font-weight:700; margin-bottom: 10px;">STANDBY MODE</h3>
-        <p style="color:rgba(255,255,255,0.45); font-size:0.9rem; max-width:400px; margin: 0 auto;">
-            Awaiting active sensor link. Please configure your Neural parameters in the left sidebar and click <b>START SCAN</b>.
+    <div style="background-color:#111827; border: 1px dashed #374151; border-radius:12px; padding: 70px 20px; text-align:center;">
+        <div style="font-size:3.5rem; margin-bottom: 15px;">📹</div>
+        <h3 style="color:#ffffff; font-weight:700; margin-bottom: 8px;">CAMERA STREAM STANDBY</h3>
+        <p style="color:#9ca3af; font-size:0.875rem; max-width:420px; margin: 0 auto;">
+            Camera stream is currently offline. Select an input source in the sidebar and click <b>START SCAN</b> to begin real-time safety monitoring.
         </p>
     </div>
     """, unsafe_allow_html=True)
