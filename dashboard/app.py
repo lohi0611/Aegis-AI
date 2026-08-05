@@ -99,7 +99,7 @@ with st.sidebar:
     )
     
     uploaded_file = None
-    if video_source == "Video File":
+    if video_source == "Upload Video File":
         uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "avi", "mov"])
     
     use_dshow = st.checkbox("Enhanced Hardware Access", value=True)
@@ -378,8 +378,8 @@ elif st.session_state.running:
                 fig.update_layout(
                     height=180, margin=dict(l=10, r=10, t=10, b=10),
                     template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                    xaxis=dict(showgrid=False, visible=False), 
-                    yaxis=dict(showgrid=False, title="FPS", titlefont=dict(color="#58a6ff"), tickfont=dict(color="#58a6ff"))
+                    xaxis=dict(showgrid=False, visible=False),
+                    yaxis=dict(showgrid=False, title=dict(text="FPS", font=dict(color="#58a6ff")), tickfont=dict(color="#58a6ff"))
                 )
                 metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"fps_chart_{total_frames}")
 
