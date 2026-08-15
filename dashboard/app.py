@@ -22,7 +22,7 @@ from ui_utils import (
     apply_custom_css, render_brand_header, kpi_card,
     draw_violation_feed_card, draw_site_status,
     navigation_tip, standby_placeholder, scan_complete_placeholder,
-    mission_control_header,
+    mission_control_header, render_theme_toggle,
 )
 from detect import PPEDetector
 from db import (
@@ -187,15 +187,16 @@ for k, v in _defaults.items():
 with st.sidebar:
     st.markdown("""
     <div style="text-align:center;padding:20px 0 12px;">
-        <div style="font-size:2.8rem;filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));">⛑️</div>
+        <div style="font-size:2.8rem;filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));">&#9937;</div>
         <div style="font-size:1.05rem;font-weight:800;color:#ffffff;letter-spacing:2px;margin-top:6px;">AEGIS AI</div>
         <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
             letter-spacing:2.5px;margin-top:3px;">Safety Intelligence Platform</div>
     </div>
     <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
-        margin:4px 0 16px;"></div>
+        margin:4px 0 10px;"></div>
     """, unsafe_allow_html=True)
 
+    render_theme_toggle()
     st.markdown("### ⚙️ CONFIGURATION")
 
     sources = ["Laptop Camera (Browser)"]

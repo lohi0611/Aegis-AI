@@ -12,7 +12,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip
+from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip, render_theme_toggle
 from db import DB_AVAILABLE, get_analytics, get_recent_sessions, get_session_violations
 
 st.set_page_config(
@@ -36,8 +36,9 @@ with st.sidebar:
             letter-spacing:2px;margin-top:2px;">Safety Intelligence</div>
     </div>
     <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
-        margin:4px 0 14px;"></div>
+        margin:4px 0 10px;"></div>
     """, unsafe_allow_html=True)
+    render_theme_toggle()
     navigation_tip()
 
 mission_control_header(

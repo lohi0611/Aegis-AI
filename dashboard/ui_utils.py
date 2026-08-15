@@ -1,117 +1,201 @@
 """
-AEGIS Safety Intelligence — UI Theme
-Construction Safety Command Center visual language.
-Palette: Charcoal / Construction Orange / Safety Amber / Alert Red / Safe Green
+AEGIS Safety Intelligence — UI Theme System
+Supports dark (default) and light themes via session state toggle.
+Uses CSS custom properties (variables) for seamless theme switching.
 """
 import streamlit as st
 
+# ── Color tokens (Python-side, for chart colours etc.) ───────────────────────
+ORANGE = "#f97316"
+AMBER  = "#fbbf24"
+RED    = "#ef4444"
+GREEN  = "#22c55e"
+TEAL   = "#06b6d4"
+BLUE   = "#3b82f6"
 
-# ── Color tokens ─────────────────────────────────────────────────────────────
-BG_BASE      = "#1a1f2e"
-BG_SURFACE   = "#232937"
-BG_ELEVATED  = "#2a3142"
-BG_OVERLAY   = "#303751"
+# ── Theme palette definitions ─────────────────────────────────────────────────
+THEMES = {
+    "dark": {
+        "--bg-base":     "#0f1117",
+        "--bg-surface":  "#1c2130",
+        "--bg-elevated": "#232b3e",
+        "--bg-overlay":  "#2d3650",
+        "--border":      "rgba(255,255,255,0.08)",
+        "--border-hover":"rgba(249,115,22,0.3)",
+        "--text-1":      "#f1f5f9",
+        "--text-2":      "rgba(241,245,249,0.6)",
+        "--text-muted":  "rgba(241,245,249,0.32)",
+        "--shadow":      "0 4px 24px rgba(0,0,0,0.5)",
+        "--shadow-sm":   "0 2px 10px rgba(0,0,0,0.35)",
+        "--glow-orange": "rgba(249,115,22,0.18)",
+        "--sidebar-bg":  "linear-gradient(180deg,#0a0d14 0%,#111827 100%)",
+        "--sidebar-border":"rgba(249,115,22,0.1)",
+        "--input-bg":    "rgba(255,255,255,0.04)",
+        "--input-border":"rgba(255,255,255,0.1)",
+    },
+    "light": {
+        "--bg-base":     "#f0f4f8",
+        "--bg-surface":  "#ffffff",
+        "--bg-elevated": "#f8fafc",
+        "--bg-overlay":  "#e2e8f0",
+        "--border":      "rgba(0,0,0,0.09)",
+        "--border-hover":"rgba(249,115,22,0.4)",
+        "--text-1":      "#0f172a",
+        "--text-2":      "rgba(15,23,42,0.6)",
+        "--text-muted":  "rgba(15,23,42,0.38)",
+        "--shadow":      "0 4px 24px rgba(0,0,0,0.10)",
+        "--shadow-sm":   "0 2px 8px rgba(0,0,0,0.07)",
+        "--glow-orange": "rgba(249,115,22,0.12)",
+        "--sidebar-bg":  "linear-gradient(180deg,#1e293b 0%,#0f172a 100%)",
+        "--sidebar-border":"rgba(249,115,22,0.15)",
+        "--input-bg":    "rgba(0,0,0,0.03)",
+        "--input-border":"rgba(0,0,0,0.12)",
+    },
+}
 
-ORANGE       = "#f97316"    # Construction helmet orange
-AMBER        = "#fbbf24"    # Safety yellow
-RED          = "#ef4444"    # Critical / violation
-GREEN        = "#22c55e"    # Safe / compliant
-TEAL         = "#06b6d4"    # Info / FPS
-BLUE         = "#3b82f6"    # Accent blue (secondary)
 
-TEXT_PRIMARY = "#f1f5f9"
-TEXT_SECONDARY = "rgba(241,245,249,0.6)"
-TEXT_MUTED   = "rgba(241,245,249,0.35)"
+def get_theme() -> str:
+    """Return current theme ('dark' or 'light') from session state."""
+    return st.session_state.get("aegis_theme", "dark")
+
+
+def render_theme_toggle():
+    """Render a compact light/dark toggle in the sidebar."""
+    current = get_theme()
+    icon    = "☀️" if current == "dark" else "🌙"
+    label   = "Switch to Light Mode" if current == "dark" else "Switch to Dark Mode"
+    if st.button(f"{icon}  {label}", key="theme_toggle_btn", use_container_width=True):
+        st.session_state.aegis_theme = "light" if current == "dark" else "dark"
+        st.rerun()
 
 
 def apply_custom_css():
+    """Inject theme-aware CSS via custom properties."""
+    theme  = get_theme()
+    tokens = THEMES[theme]
+
+    # Build :root variable block
+    root_vars = "\n".join(f"        {k}: {v};" for k, v in tokens.items())
+
     st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    /* ── GLOBAL RESET ─────────────────────────────────────────────────────── */
+    /* ── THEME VARIABLES ──────────────────────────────────────────────────── */
+    :root {{
+{root_vars}
+        --accent:        {ORANGE};
+        --accent-dim:    rgba(249,115,22,0.15);
+        --red:           {RED};
+        --green:         {GREEN};
+        --amber:         {AMBER};
+        --teal:          {TEAL};
+        --blue:          {BLUE};
+        --radius:        12px;
+        --radius-sm:     8px;
+        --transition:    0.2s ease;
+    }}
+
+    /* ── GLOBAL ──────────────────────────────────────────────────────────── */
     html, body,
     [data-testid="stAppViewContainer"],
     [data-testid="stMain"],
     [data-testid="stHeader"] {{
         font-family: 'Inter', system-ui, sans-serif !important;
-        background: {BG_BASE} !important;
-        color: {TEXT_PRIMARY} !important;
+        background: var(--bg-base) !important;
+        color: var(--text-1) !important;
     }}
 
-    /* Subtle construction-grid texture overlay */
     [data-testid="stAppViewContainer"]::before {{
         content: '';
         position: fixed;
-        top: 0; left: 0; right: 0; bottom: 0;
+        inset: 0;
         background:
-            radial-gradient(ellipse 70% 50% at 15% 0%, rgba(249,115,22,0.07) 0%, transparent 60%),
-            radial-gradient(ellipse 50% 40% at 85% 100%, rgba(6,182,212,0.04) 0%, transparent 55%);
+            radial-gradient(ellipse 70% 50% at 15% 0%, var(--glow-orange) 0%, transparent 60%),
+            radial-gradient(ellipse 45% 40% at 85% 100%, rgba(6,182,212,0.04) 0%, transparent 55%);
         pointer-events: none;
         z-index: 0;
     }}
 
-    /* ── TYPOGRAPHY ────────────────────────────────────────────────────────── */
     code, pre {{ font-family: 'JetBrains Mono', monospace !important; }}
 
-    /* ── SIDEBAR ───────────────────────────────────────────────────────────── */
+    /* ── SIDEBAR ──────────────────────────────────────────────────────────── */
     section[data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, #151922 0%, #1a1f2e 100%) !important;
-        border-right: 1px solid rgba(249,115,22,0.12) !important;
+        background: var(--sidebar-bg) !important;
+        border-right: 1px solid var(--sidebar-border) !important;
     }}
     section[data-testid="stSidebar"] > div {{ padding: 1rem 0.75rem !important; }}
 
     section[data-testid="stSidebar"] .stMarkdown h3 {{
         color: {ORANGE} !important;
-        font-size: 0.7rem !important;
+        font-size: 0.68rem !important;
         font-weight: 700 !important;
-        letter-spacing: 1.8px !important;
+        letter-spacing: 2px !important;
         text-transform: uppercase !important;
-        margin: 20px 0 8px !important;
+        margin: 18px 0 6px !important;
         padding-bottom: 5px !important;
         border-bottom: 1px solid rgba(249,115,22,0.15) !important;
     }}
 
-    /* ── BUTTONS ───────────────────────────────────────────────────────────── */
+    /* sidebar text colour always light (sidebar is always dark) */
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stMarkdown p,
+    section[data-testid="stSidebar"] div {{
+        color: rgba(241,245,249,0.75) !important;
+    }}
+
+    /* ── BUTTONS ──────────────────────────────────────────────────────────── */
     .stButton > button {{
         background: linear-gradient(135deg, {ORANGE} 0%, #ea6c0a 100%) !important;
         border: 1px solid rgba(249,115,22,0.4) !important;
         color: #fff !important;
-        border-radius: 8px !important;
+        border-radius: var(--radius-sm) !important;
         font-weight: 700 !important;
         font-size: 0.8rem !important;
         letter-spacing: 0.8px !important;
         text-transform: uppercase !important;
-        padding: 9px 18px !important;
-        transition: all 0.2s ease !important;
-        box-shadow: 0 2px 12px rgba(249,115,22,0.3) !important;
+        padding: 10px 20px !important;
+        transition: all var(--transition) !important;
+        box-shadow: 0 2px 14px rgba(249,115,22,0.28) !important;
         width: 100% !important;
     }}
     .stButton > button:hover {{
         background: linear-gradient(135deg, #fb923c 0%, {ORANGE} 100%) !important;
-        box-shadow: 0 4px 20px rgba(249,115,22,0.5) !important;
+        box-shadow: 0 4px 22px rgba(249,115,22,0.46) !important;
         transform: translateY(-1px) !important;
     }}
     .stButton > button:active {{ transform: translateY(0) !important; }}
 
-    /* Stop scan button — secondary */
+    /* Stop scan variant */
     .stop-btn .stButton > button {{
-        background: linear-gradient(135deg, rgba(239,68,68,0.15), rgba(239,68,68,0.08)) !important;
-        border: 1px solid rgba(239,68,68,0.4) !important;
+        background: rgba(239,68,68,0.1) !important;
+        border: 1px solid rgba(239,68,68,0.35) !important;
         color: #fca5a5 !important;
         box-shadow: none !important;
     }}
     .stop-btn .stButton > button:hover {{
-        background: rgba(239,68,68,0.25) !important;
-        box-shadow: 0 4px 16px rgba(239,68,68,0.3) !important;
+        background: rgba(239,68,68,0.2) !important;
+        box-shadow: 0 4px 16px rgba(239,68,68,0.28) !important;
     }}
 
-    /* ── FORM CONTROLS ─────────────────────────────────────────────────────── */
+    /* Theme toggle button */
+    [data-testid="stButton"][aria-label="theme_toggle_btn"] > button,
+    button[kind="secondary"] {{
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        color: rgba(241,245,249,0.75) !important;
+        box-shadow: none !important;
+        font-size: 0.75rem !important;
+        text-transform: none !important;
+        letter-spacing: 0 !important;
+    }}
+
+    /* ── FORM CONTROLS ────────────────────────────────────────────────────── */
     div[data-baseweb="select"] > div {{
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
-        color: {TEXT_PRIMARY} !important;
+        background: var(--input-bg) !important;
+        border: 1px solid var(--input-border) !important;
+        border-radius: var(--radius-sm) !important;
+        color: var(--text-1) !important;
     }}
     div[data-baseweb="select"] > div:focus-within {{
         border-color: rgba(249,115,22,0.5) !important;
@@ -124,160 +208,160 @@ def apply_custom_css():
     }}
 
     [data-testid="stFileUploader"] {{
-        border: 1px dashed rgba(249,115,22,0.3) !important;
-        border-radius: 10px !important;
-        background: rgba(249,115,22,0.03) !important;
-    }}
-
-    [data-baseweb="tag"] {{
-        background: rgba(249,115,22,0.15) !important;
-        border: 1px solid rgba(249,115,22,0.35) !important;
-        border-radius: 5px !important;
-        color: #fed7aa !important;
+        border: 1.5px dashed rgba(249,115,22,0.3) !important;
+        border-radius: var(--radius) !important;
+        background: var(--accent-dim) !important;
     }}
 
     [data-testid="stTextInput"] > div > div > input,
     [data-testid="stNumberInput"] > div > div > input {{
-        background: rgba(255,255,255,0.04) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 8px !important;
-        color: {TEXT_PRIMARY} !important;
+        background: var(--input-bg) !important;
+        border: 1px solid var(--input-border) !important;
+        border-radius: var(--radius-sm) !important;
+        color: var(--text-1) !important;
     }}
-    [data-testid="stTextInput"] > div > div > input:focus,
-    [data-testid="stNumberInput"] > div > div > input:focus {{
+    [data-testid="stTextInput"] > div > div > input:focus {{
         border-color: rgba(249,115,22,0.5) !important;
         box-shadow: 0 0 0 3px rgba(249,115,22,0.1) !important;
     }}
 
-    /* ── CARDS ─────────────────────────────────────────────────────────────── */
-    .aegis-card {{
-        background: linear-gradient(145deg, {BG_SURFACE} 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 14px;
-        padding: 18px 20px;
-        margin-bottom: 14px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-        transition: transform 0.2s ease, border-color 0.2s ease;
-        position: relative;
-        overflow: hidden;
-    }}
-    .aegis-card::before {{
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; height: 1px;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-    }}
-    .aegis-card:hover {{
-        transform: translateY(-2px);
-        border-color: rgba(249,115,22,0.15);
-    }}
-
-    /* ── KPI CARDS ─────────────────────────────────────────────────────────── */
+    /* ── KPI CARDS ────────────────────────────────────────────────────────── */
     .kpi-card {{
-        background: linear-gradient(145deg, {BG_SURFACE} 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 14px;
-        padding: 18px 20px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 16px 18px 20px;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        margin-bottom: 8px;
+        box-shadow: var(--shadow-sm);
+        transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+        height: 100%;
     }}
     .kpi-card:hover {{
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+        box-shadow: var(--shadow);
+        border-color: var(--border-hover);
     }}
+    /* Coloured bottom bar */
     .kpi-card::after {{
         content: '';
         position: absolute;
         bottom: 0; left: 0; right: 0; height: 3px;
-        border-radius: 0 0 14px 14px;
+        border-radius: 0 0 var(--radius) var(--radius);
     }}
-    .kpi-orange::after  {{ background: linear-gradient(90deg, {ORANGE}, #fb923c); box-shadow: 0 0 10px rgba(249,115,22,0.5); }}
-    .kpi-red::after     {{ background: linear-gradient(90deg, {RED}, #f87171);    box-shadow: 0 0 10px rgba(239,68,68,0.5); }}
-    .kpi-green::after   {{ background: linear-gradient(90deg, {GREEN}, #4ade80);  box-shadow: 0 0 10px rgba(34,197,94,0.5); }}
-    .kpi-amber::after   {{ background: linear-gradient(90deg, {AMBER}, #fcd34d);  box-shadow: 0 0 10px rgba(251,191,36,0.5); }}
-    .kpi-teal::after    {{ background: linear-gradient(90deg, {TEAL}, #22d3ee);   box-shadow: 0 0 10px rgba(6,182,212,0.5); }}
-    .kpi-blue::after    {{ background: linear-gradient(90deg, {BLUE}, #60a5fa);   box-shadow: 0 0 10px rgba(59,130,246,0.5); }}
+    .kpi-orange::after  {{ background: linear-gradient(90deg,{ORANGE},{AMBER}); }}
+    .kpi-red::after     {{ background: linear-gradient(90deg,{RED},#f87171); }}
+    .kpi-green::after   {{ background: linear-gradient(90deg,{GREEN},#4ade80); }}
+    .kpi-amber::after   {{ background: linear-gradient(90deg,{AMBER},#fde68a); }}
+    .kpi-teal::after    {{ background: linear-gradient(90deg,{TEAL},#22d3ee); }}
+    .kpi-blue::after    {{ background: linear-gradient(90deg,{BLUE},#60a5fa); }}
 
-    .kpi-label {{
-        font-size: 0.68rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1.4px;
-        color: {TEXT_MUTED};
+    .kpi-header {{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         margin-bottom: 10px;
     }}
-    .kpi-value {{
-        font-size: 1.9rem;
-        font-weight: 800;
-        color: #ffffff;
-        line-height: 1;
-        letter-spacing: -0.5px;
+    .kpi-label {{
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--text-muted);
+        line-height: 1.3;
+        flex: 1;
+        padding-right: 8px;
     }}
     .kpi-icon {{
-        position: absolute;
-        top: 15px; right: 16px;
-        font-size: 1.4rem;
-        opacity: 0.65;
+        font-size: 1.2rem;
+        opacity: 0.6;
+        flex-shrink: 0;
+        line-height: 1;
     }}
-    .kpi-sub {{
-        font-size: 0.7rem;
-        color: {TEXT_MUTED};
-        margin-top: 5px;
+    .kpi-value {{
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: var(--text-1);
+        line-height: 1;
+        letter-spacing: -0.5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }}
+    .kpi-value-sm {{
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-1);
+        line-height: 1.2;
+        word-break: break-word;
+        overflow-wrap: break-word;
     }}
 
-    /* ── VIOLATION FEED CARDS ──────────────────────────────────────────────── */
+    /* ── AEGIS CARD (generic container) ──────────────────────────────────── */
+    .aegis-card {{
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+        margin-bottom: 14px;
+        box-shadow: var(--shadow-sm);
+        transition: transform var(--transition), border-color var(--transition);
+    }}
+    .aegis-card:hover {{
+        transform: translateY(-2px);
+        border-color: var(--border-hover);
+    }}
+
+    /* ── VIOLATION CARDS ──────────────────────────────────────────────────── */
     .violation-card {{
-        background: linear-gradient(135deg, rgba(239,68,68,0.07) 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(239,68,68,0.2);
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
         border-left: 3px solid {RED};
-        border-radius: 10px;
+        border-radius: var(--radius-sm);
         padding: 11px 14px;
         margin-bottom: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+        box-shadow: var(--shadow-sm);
+        transition: border-color var(--transition);
     }}
     .violation-card-critical {{
-        background: linear-gradient(135deg, rgba(239,68,68,0.1) 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(239,68,68,0.3);
-        border-left: 3px solid {RED};
+        border-left-color: {RED};
+        background: linear-gradient(135deg, rgba(239,68,68,0.05) 0%, var(--bg-surface) 100%);
     }}
     .violation-card-high {{
         border-left-color: {AMBER};
-        border-color: rgba(251,191,36,0.25);
-        background: linear-gradient(135deg, rgba(251,191,36,0.06) 0%, {BG_ELEVATED} 100%);
+        background: linear-gradient(135deg, rgba(251,191,36,0.04) 0%, var(--bg-surface) 100%);
     }}
     .violation-card-resolved {{
         border-left-color: {GREEN};
-        border-color: rgba(34,197,94,0.2);
-        background: linear-gradient(135deg, rgba(34,197,94,0.05) 0%, {BG_ELEVATED} 100%);
+        background: linear-gradient(135deg, rgba(34,197,94,0.04) 0%, var(--bg-surface) 100%);
     }}
 
-    /* ── STATUS BADGES ─────────────────────────────────────────────────────── */
+    /* ── STATUS BADGES ────────────────────────────────────────────────────── */
     .badge {{
         display: inline-flex;
         align-items: center;
         gap: 4px;
         padding: 3px 9px;
         border-radius: 20px;
-        font-size: 0.68rem;
+        font-size: 0.65rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.8px;
+        white-space: nowrap;
     }}
-    .badge-critical  {{ background: rgba(239,68,68,0.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }}
-    .badge-high      {{ background: rgba(251,191,36,0.15); color: #fde68a; border: 1px solid rgba(251,191,36,0.35); }}
-    .badge-safe      {{ background: rgba(34,197,94,0.12);  color: #86efac; border: 1px solid rgba(34,197,94,0.3); }}
-    .badge-running   {{ background: rgba(249,115,22,0.15); color: #fdba74; border: 1px solid rgba(249,115,22,0.35); }}
-    .badge-info      {{ background: rgba(6,182,212,0.12);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.3); }}
+    .badge-critical {{ background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }}
+    .badge-high     {{ background: rgba(251,191,36,0.12); color: #fde68a; border: 1px solid rgba(251,191,36,0.3); }}
+    .badge-safe     {{ background: rgba(34,197,94,0.10);  color: #86efac; border: 1px solid rgba(34,197,94,0.25); }}
+    .badge-running  {{ background: rgba(249,115,22,0.12); color: #fdba74; border: 1px solid rgba(249,115,22,0.3); }}
+    .badge-info     {{ background: rgba(6,182,212,0.10);  color: #67e8f9; border: 1px solid rgba(6,182,212,0.25); }}
 
-    /* ── SECTION DIVIDERS ──────────────────────────────────────────────────── */
+    /* ── SECTION TITLE ────────────────────────────────────────────────────── */
     .section-title {{
-        font-size: 0.8rem;
+        font-size: 0.75rem;
         font-weight: 700;
-        color: rgba(241,245,249,0.8);
-        letter-spacing: 0.4px;
+        color: var(--text-2);
+        letter-spacing: 0.6px;
         margin-bottom: 12px;
         display: flex;
         align-items: center;
@@ -290,78 +374,35 @@ def apply_custom_css():
         background: linear-gradient(90deg, rgba(249,115,22,0.2), transparent);
     }}
 
-    hr {{ border-color: rgba(255,255,255,0.06) !important; margin: 14px 0 !important; }}
-
-    /* ── STREAMLIT DEFAULTS ────────────────────────────────────────────────── */
-    [data-testid="stDataFrame"] {{
-        border: 1px solid rgba(255,255,255,0.07) !important;
-        border-radius: 10px !important;
-        overflow: hidden !important;
+    /* ── BRAND HEADER ─────────────────────────────────────────────────────── */
+    .brand-header {{
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-top: 3px solid {ORANGE};
+        border-radius: var(--radius);
+        padding: 18px 24px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--shadow);
+    }}
+    .brand-name {{
+        font-size: 1.5rem;
+        font-weight: 900;
+        color: var(--text-1);
+        letter-spacing: 3px;
+        line-height: 1;
+    }}
+    .brand-sub {{
+        font-size: 0.6rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        margin-top: 4px;
     }}
 
-    div[data-testid="stAlert"] {{
-        border-radius: 10px !important;
-        border: 1px solid rgba(255,255,255,0.08) !important;
-        background: rgba(255,255,255,0.03) !important;
-    }}
-
-    [data-testid="stDownloadButton"] > button {{
-        background: rgba(34,197,94,0.1) !important;
-        border: 1px solid rgba(34,197,94,0.3) !important;
-        color: #86efac !important;
-        font-weight: 600 !important;
-        border-radius: 8px !important;
-    }}
-
-    [data-testid="stToast"] {{
-        background: {BG_ELEVATED} !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 10px !important;
-    }}
-
-    .block-container {{
-        padding-top: 1.5rem !important;
-        padding-bottom: 2rem !important;
-        max-width: 1400px !important;
-    }}
-
-    ::-webkit-scrollbar {{ width: 5px; height: 5px; }}
-    ::-webkit-scrollbar-track {{ background: rgba(255,255,255,0.02); }}
-    ::-webkit-scrollbar-thumb {{ background: rgba(249,115,22,0.25); border-radius: 4px; }}
-    ::-webkit-scrollbar-thumb:hover {{ background: rgba(249,115,22,0.45); }}
-
-    /* ── SITE STATUS PANEL ─────────────────────────────────────────────────── */
-    .site-status-safe {{
-        background: linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0.04) 100%);
-        border: 1px solid rgba(34,197,94,0.3);
-        border-radius: 14px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(34,197,94,0.08);
-    }}
-    .site-status-warning {{
-        background: linear-gradient(135deg, rgba(251,191,36,0.12) 0%, rgba(251,191,36,0.04) 100%);
-        border: 1px solid rgba(251,191,36,0.3);
-        border-radius: 14px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(251,191,36,0.08);
-    }}
-    .site-status-critical {{
-        background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%);
-        border: 1px solid rgba(239,68,68,0.35);
-        border-radius: 14px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 4px 20px rgba(239,68,68,0.1);
-        animation: pulse-border 2s infinite;
-    }}
-    @keyframes pulse-border {{
-        0%, 100% {{ border-color: rgba(239,68,68,0.35); }}
-        50%       {{ border-color: rgba(239,68,68,0.7); }}
-    }}
-
-    /* ── SCANNING INDICATOR ────────────────────────────────────────────────── */
+    /* ── SCANNING DOT ─────────────────────────────────────────────────────── */
     .scan-dot {{
         display: inline-block;
         width: 8px; height: 8px;
@@ -370,139 +411,215 @@ def apply_custom_css():
         animation: blink 1.2s infinite;
         box-shadow: 0 0 6px {ORANGE};
         margin-right: 5px;
+        vertical-align: middle;
     }}
     @keyframes blink {{
-        0%, 100% {{ opacity: 1; }}
-        50%       {{ opacity: 0.2; }}
+        0%,100% {{ opacity:1; }}
+        50%      {{ opacity:0.15; }}
     }}
 
-    /* ── DB STATUS INDICATOR ───────────────────────────────────────────────── */
-    .db-status-ok  {{ color: {GREEN};  font-size: 0.7rem; font-weight: 600; }}
-    .db-status-off {{ color: {AMBER};  font-size: 0.7rem; font-weight: 600; }}
+    /* ── DB STATUS ────────────────────────────────────────────────────────── */
+    .db-status-ok  {{ color:{GREEN};  font-size:0.68rem; font-weight:600; }}
+    .db-status-off {{ color:{AMBER};  font-size:0.68rem; font-weight:600; }}
 
-    /* ── STRIPED WARNING BANNER ─────────────────────────────────────────────── */
+    /* ── WARNING STRIPE ───────────────────────────────────────────────────── */
     .warning-stripe {{
         background: repeating-linear-gradient(
             -45deg,
-            rgba(249,115,22,0.08),
-            rgba(249,115,22,0.08) 10px,
+            rgba(249,115,22,0.06),
+            rgba(249,115,22,0.06) 10px,
             transparent 10px,
             transparent 20px
         );
-        border: 1px solid rgba(249,115,22,0.25);
-        border-radius: 10px;
+        border: 1px solid rgba(249,115,22,0.22);
+        border-radius: var(--radius-sm);
         padding: 12px 16px;
-        font-size: 0.8rem;
+        font-size: 0.78rem;
         color: #fed7aa;
+        margin-bottom: 12px;
     }}
 
-    /* ── SESSION HISTORY ROWS ──────────────────────────────────────────────── */
+    /* ── SITE STATUS PANELS ───────────────────────────────────────────────── */
+    .site-status-safe {{
+        background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, var(--bg-surface) 100%);
+        border: 1px solid rgba(34,197,94,0.28);
+        border-radius: var(--radius);
+        padding: 20px; text-align: center;
+    }}
+    .site-status-warning {{
+        background: linear-gradient(135deg, rgba(251,191,36,0.1) 0%, var(--bg-surface) 100%);
+        border: 1px solid rgba(251,191,36,0.28);
+        border-radius: var(--radius);
+        padding: 20px; text-align: center;
+    }}
+    .site-status-critical {{
+        background: linear-gradient(135deg, rgba(239,68,68,0.12) 0%, var(--bg-surface) 100%);
+        border: 1px solid rgba(239,68,68,0.32);
+        border-radius: var(--radius);
+        padding: 20px; text-align: center;
+        animation: pulse-border 2s infinite;
+    }}
+    @keyframes pulse-border {{
+        0%,100% {{ border-color: rgba(239,68,68,0.32); }}
+        50%      {{ border-color: rgba(239,68,68,0.65); }}
+    }}
+
+    /* ── DATAFRAME ────────────────────────────────────────────────────────── */
+    [data-testid="stDataFrame"] {{
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius) !important;
+        overflow: hidden !important;
+    }}
+
+    /* ── HR ───────────────────────────────────────────────────────────────── */
+    hr {{ border-color: var(--border) !important; margin: 14px 0 !important; }}
+
+    /* ── SCROLLBAR ────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar {{ width: 5px; height: 5px; }}
+    ::-webkit-scrollbar-track {{ background: transparent; }}
+    ::-webkit-scrollbar-thumb {{ background: rgba(249,115,22,0.25); border-radius: 4px; }}
+    ::-webkit-scrollbar-thumb:hover {{ background: rgba(249,115,22,0.45); }}
+
+    /* ── DOWNLOAD BUTTON ──────────────────────────────────────────────────── */
+    [data-testid="stDownloadButton"] > button {{
+        background: rgba(34,197,94,0.08) !important;
+        border: 1px solid rgba(34,197,94,0.25) !important;
+        color: #86efac !important;
+        font-weight: 600 !important;
+        border-radius: var(--radius-sm) !important;
+    }}
+
+    /* ── PAGE HEADER ──────────────────────────────────────────────────────── */
+    .page-header {{
+        margin-bottom: 20px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }}
+    .page-header h1 {{
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: var(--text-1);
+        letter-spacing: -0.4px;
+        margin: 0 0 4px 0;
+    }}
+    .page-header p {{
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin: 0;
+    }}
+
+    /* ── SESSION ROWS ─────────────────────────────────────────────────────── */
     .session-row {{
-        background: {BG_SURFACE};
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 10px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
         padding: 12px 16px;
         margin-bottom: 8px;
-        transition: border-color 0.2s ease;
+        transition: border-color var(--transition);
     }}
-    .session-row:hover {{ border-color: rgba(249,115,22,0.25); }}
+    .session-row:hover {{ border-color: var(--border-hover); }}
+
+    /* ── EXPANDER ─────────────────────────────────────────────────────────── */
+    [data-testid="stExpander"] {{
+        background: var(--bg-surface) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: var(--radius) !important;
+        overflow: hidden;
+    }}
+
+    /* ── MAIN CONTENT WIDTH ───────────────────────────────────────────────── */
+    .block-container {{
+        padding: 1.5rem 2rem 2rem !important;
+        max-width: 1400px !important;
+    }}
 
     </style>
     """, unsafe_allow_html=True)
 
 
-# ── Component helpers ────────────────────────────────────────────────────────
+# ── Component helpers ─────────────────────────────────────────────────────────
 
 def render_brand_header(is_scanning: bool = False, db_ok: bool = True):
-    """Render the main AEGIS brand header with scanning status."""
-    scan_indicator = (
-        '<span class="scan-dot"></span> <span style="color:#f97316;font-size:0.75rem;font-weight:700;">SCANNING ACTIVE</span>'
+    """Render the AEGIS brand header bar."""
+    theme   = get_theme()
+    dot_html = '<span class="scan-dot"></span>' if is_scanning else ""
+    scan_txt = (
+        f'{dot_html}<span style="color:{ORANGE};font-size:0.72rem;font-weight:700;">SCANNING</span>'
         if is_scanning else
-        '<span style="color:rgba(241,245,249,0.35);font-size:0.75rem;">STANDBY</span>'
+        '<span style="color:var(--text-muted);font-size:0.72rem;">STANDBY</span>'
     )
-    db_indicator = (
-        '<span class="db-status-ok">⬤ DB CONNECTED</span>'
+    db_html = (
+        '<span class="db-status-ok">&#9679; DB CONNECTED</span>'
         if db_ok else
-        '<span class="db-status-off">⬤ DB OFFLINE (CSV fallback)</span>'
+        '<span class="db-status-off">&#9679; DB OFFLINE</span>'
     )
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, {BG_SURFACE} 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(249,115,22,0.15);
-        border-radius: 16px;
-        padding: 20px 28px;
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(249,115,22,0.05);
-        position: relative;
-        overflow: hidden;
-    ">
-        <div style="position:absolute;top:0;left:0;right:0;height:3px;
-            background:linear-gradient(90deg,{ORANGE},{AMBER},transparent);"></div>
-        <div style="display:flex;align-items:center;gap:18px;">
-            <div style="font-size:2.8rem;filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));line-height:1;">&#9937;</div>
+    <div class="brand-header">
+        <div style="display:flex;align-items:center;gap:16px;">
+            <div style="font-size:2.4rem;line-height:1;filter:drop-shadow(0 0 12px rgba(249,115,22,0.45));">&#9937;</div>
             <div>
-                <div style="font-size:1.6rem;font-weight:900;color:#ffffff;letter-spacing:3px;line-height:1;">AEGIS</div>
-                <div style="font-size:0.65rem;color:rgba(241,245,249,0.4);text-transform:uppercase;letter-spacing:2.5px;margin-top:3px;">Construction Safety Intelligence</div>
+                <div class="brand-name">AEGIS</div>
+                <div class="brand-sub">Construction Safety Intelligence</div>
             </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div>{scan_indicator}</div>
-            <div>{db_indicator}</div>
+            <div>{scan_txt}</div>
+            <div>{db_html}</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 
-def kpi_card(label: str, value: str, icon: str = "🔹",
+def kpi_card(label: str, value: str, icon: str = "",
              color: str = ORANGE, alert_type: str = None):
-    """Render a KPI card with construction-safety styling."""
-    color_class = "kpi-orange"
-    if alert_type == "danger" or color in (RED, "#f85149", "#ef4444"):
-        color_class = "kpi-red"
-    elif alert_type == "success" or color in (GREEN, "#22c55e", "#10b981", "#56d364"):
-        color_class = "kpi-green"
-    elif color in (AMBER, "#fbbf24", "#e3b341"):
-        color_class = "kpi-amber"
-    elif color in (TEAL, "#06b6d4", "#00d4ff", "#38bdf8"):
-        color_class = "kpi-teal"
-    elif color in (BLUE, "#3b82f6", "#58a6ff"):
-        color_class = "kpi-blue"
+    """Render a KPI card. Long values auto-switch to smaller font."""
+    color_map = {
+        RED:   "kpi-red",
+        GREEN: "kpi-green",
+        AMBER: "kpi-amber",
+        TEAL:  "kpi-teal",
+        BLUE:  "kpi-blue",
+    }
+    css_cls = color_map.get(color, "kpi-orange")
+    if alert_type == "danger":   css_cls = "kpi-red"
+    if alert_type == "success":  css_cls = "kpi-green"
+
+    # Long values (>6 chars or contains space) get smaller font
+    val_cls = "kpi-value-sm" if (len(str(value)) > 6 or " " in str(value)) else "kpi-value"
 
     st.markdown(f"""
-    <div class="kpi-card {color_class}">
-        <div class="kpi-icon">{icon}</div>
-        <div class="kpi-label">{label}</div>
-        <div class="kpi-value">{value}</div>
+    <div class="kpi-card {css_cls}">
+        <div class="kpi-header">
+            <div class="kpi-label">{label}</div>
+            <div class="kpi-icon">{icon}</div>
+        </div>
+        <div class="{val_cls}">{value}</div>
     </div>
     """, unsafe_allow_html=True)
 
 
 def draw_site_status(total_violations: int, critical: int):
-    """Render the SITE STATUS panel based on live detection state."""
+    """Render the SITE STATUS panel."""
     if critical > 0:
-        css_class = "site-status-critical"
-        icon = "🔴"
-        title = "CRITICAL VIOLATIONS"
-        sub = f"{critical} critical event{'s' if critical != 1 else ''} detected"
+        css_cls = "site-status-critical"
+        icon, title, sub = "🚨", "CRITICAL ALERT", f"{critical} critical violation{'s' if critical!=1 else ''} active"
+        color = RED
     elif total_violations > 0:
-        css_class = "site-status-warning"
-        icon = "🟡"
-        title = "ATTENTION REQUIRED"
-        sub = f"{total_violations} violation{'s' if total_violations != 1 else ''} in progress"
+        css_cls = "site-status-warning"
+        icon, title, sub = "⚠️", "ATTENTION REQUIRED", f"{total_violations} violation{'s' if total_violations!=1 else ''} detected"
+        color = AMBER
     else:
-        css_class = "site-status-safe"
-        icon = "🟢"
-        title = "SITE SAFE"
-        sub = "No violations detected"
+        css_cls = "site-status-safe"
+        icon, title, sub = "✅", "SITE CLEAR", "All workers compliant"
+        color = GREEN
 
     st.markdown(f"""
-    <div class="{css_class}">
+    <div class="{css_cls}">
         <div style="font-size:2rem;margin-bottom:8px;">{icon}</div>
-        <div style="font-size:0.85rem;font-weight:800;color:#ffffff;letter-spacing:1px;">{title}</div>
-        <div style="font-size:0.72rem;color:rgba(241,245,249,0.5);margin-top:5px;">{sub}</div>
+        <div style="font-size:0.85rem;font-weight:800;color:{color};letter-spacing:1px;">{title}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:5px;">{sub}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -511,130 +628,94 @@ def draw_violation_feed_card(timestamp: str, violation_type: str, worker_id: str
                               confidence: float, severity: str = "HIGH", status: str = "Violation"):
     """Render a single violation in the live feed."""
     if status == "Resolved":
-        card_cls = "violation-card violation-card-resolved"
-        dot = "🟢"
-        badge_cls = "badge badge-safe"
-        badge_txt = "RESOLVED"
+        card_cls, badge_cls, badge_txt, dot = "violation-card violation-card-resolved", "badge badge-safe",     "RESOLVED", "🟢"
     elif severity == "CRITICAL":
-        card_cls = "violation-card violation-card-critical"
-        dot = "🔴"
-        badge_cls = "badge badge-critical"
-        badge_txt = "CRITICAL"
+        card_cls, badge_cls, badge_txt, dot = "violation-card violation-card-critical", "badge badge-critical",  "CRITICAL", "🔴"
     else:
-        card_cls = "violation-card violation-card-high"
-        dot = "🟡"
-        badge_cls = "badge badge-high"
-        badge_txt = severity
+        card_cls, badge_cls, badge_txt, dot = "violation-card violation-card-high",     "badge badge-high",      severity,   "🟡"
 
     st.markdown(f"""
     <div class="{card_cls}">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;
-                color:rgba(241,245,249,0.35);">{timestamp}</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:0.67rem;color:var(--text-muted);">{timestamp}</span>
             <span class="{badge_cls}">{dot} {badge_txt}</span>
         </div>
-        <div style="font-size:0.88rem;font-weight:700;color:#ffffff;margin-bottom:4px;">{violation_type}</div>
+        <div style="font-size:0.86rem;font-weight:700;color:var(--text-1);margin-bottom:4px;">{violation_type}</div>
         <div style="display:flex;justify-content:space-between;">
-            <span style="font-size:0.72rem;color:rgba(241,245,249,0.4);">
-                Worker: <b style="color:#fdba74;">{worker_id}</b>
-            </span>
-            <span style="font-size:0.72rem;color:rgba(241,245,249,0.4);">
-                Conf: <b style="color:{TEAL};font-family:'JetBrains Mono',monospace;">{confidence:.2f}</b>
-            </span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">Worker: <b style="color:#fdba74;">{worker_id}</b></span>
+            <span style="font-size:0.7rem;color:var(--text-muted);">Conf: <b style="color:{TEAL};font-family:'JetBrains Mono',monospace;">{confidence:.2f}</b></span>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 
-# Keep backward-compat aliases
+# Backward compat alias
 def draw_incident_card(timestamp, breach_type, worker_id, confidence, snap_path, status):
-    severity = "CRITICAL" if "Hardhat" in breach_type or "Vest" in breach_type else "HIGH"
+    severity = "CRITICAL" if ("Hardhat" in breach_type or "Vest" in breach_type) else "HIGH"
     draw_violation_feed_card(timestamp, breach_type, worker_id, confidence, severity, status)
 
 
 def mission_control_header(title: str, subtitle: str):
-    """Legacy header — kept for pages that still use it."""
+    """Page-level header."""
     st.markdown(f"""
-    <div style="margin-bottom:16px;">
-        <h1 style="font-size:1.8rem;font-weight:900;color:#ffffff;
-            letter-spacing:-0.5px;margin-bottom:4px;">{title}</h1>
-        <p style="font-size:0.7rem;color:rgba(241,245,249,0.35);
-            text-transform:uppercase;letter-spacing:2px;">{subtitle}</p>
-        <div style="height:2px;background:linear-gradient(90deg,{ORANGE},transparent);
-            margin-top:10px;border-radius:2px;max-width:200px;"></div>
+    <div class="page-header">
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
     </div>
     """, unsafe_allow_html=True)
 
 
 def navigation_tip():
+    """Sidebar nav tip."""
     st.markdown(f"""
-    <div style="
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: rgba(249,115,22,0.06);
-        border: 1px solid rgba(249,115,22,0.15);
-        margin: 16px 0;
-    ">
-        <div style="color:{ORANGE};font-weight:700;font-size:0.7rem;
-            text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">⛑️ Navigation</div>
-        <div style="color:rgba(241,245,249,0.45);font-size:0.75rem;line-height:1.5;">
-            Use the sidebar to switch between
-            <b style="color:rgba(241,245,249,0.7);">Safety Monitor</b>,
-            <b style="color:rgba(241,245,249,0.7);">Analytics</b> &amp;
-            <b style="color:rgba(241,245,249,0.7);">Incident Explorer</b>.
+    <div style="padding:12px 14px;border-radius:10px;background:rgba(249,115,22,0.06);
+        border:1px solid rgba(249,115,22,0.15);margin:12px 0;">
+        <div style="color:{ORANGE};font-weight:700;font-size:0.68rem;text-transform:uppercase;
+            letter-spacing:1px;margin-bottom:4px;">&#9937; Navigation</div>
+        <div style="color:rgba(241,245,249,0.45);font-size:0.73rem;line-height:1.5;">
+            <b style="color:rgba(241,245,249,0.7);">Safety Monitor</b> &#8226;
+            <b style="color:rgba(241,245,249,0.7);">Analytics</b> &#8226;
+            <b style="color:rgba(241,245,249,0.7);">Incident Explorer</b>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
 
 def standby_placeholder():
-    """Render the standby video area."""
+    """Standby screen."""
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, rgba(249,115,22,0.04) 0%, {BG_ELEVATED} 100%);
-        border: 1px dashed rgba(249,115,22,0.2);
-        border-radius: 14px;
-        padding: 80px 20px;
-        text-align: center;
-    ">
-        <div style="font-size:3.5rem;margin-bottom:16px;
-            filter:drop-shadow(0 0 18px rgba(249,115,22,0.35));">📹</div>
-        <div style="font-size:1rem;font-weight:800;color:#ffffff;
-            letter-spacing:0.5px;margin-bottom:8px;">SAFETY MONITOR STANDBY</div>
+    <div style="background:var(--bg-surface);border:1.5px dashed rgba(249,115,22,0.2);
+        border-radius:var(--radius);padding:80px 20px;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:14px;filter:drop-shadow(0 0 16px rgba(249,115,22,0.3));">&#128249;</div>
+        <div style="font-size:0.95rem;font-weight:800;color:var(--text-1);letter-spacing:0.5px;margin-bottom:8px;">
+            SAFETY MONITOR STANDBY</div>
         <div style="width:36px;height:2px;background:linear-gradient(90deg,{ORANGE},{AMBER});
-            margin:0 auto 12px;"></div>
-        <p style="color:rgba(241,245,249,0.35);font-size:0.8rem;
-            max-width:360px;margin:0 auto;line-height:1.6;">
+            margin:0 auto 12px;border-radius:2px;"></div>
+        <p style="color:var(--text-muted);font-size:0.8rem;max-width:360px;margin:0 auto;line-height:1.6;">
             Select an input source from the sidebar and click
-            <b style="color:{ORANGE};">▶ START SCAN</b> to begin monitoring.
+            <b style="color:{ORANGE};">&#9654; START SCAN</b> to begin monitoring.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 
 def scan_complete_placeholder(violations: int, frames: int, duration: str = ""):
-    """Render the post-scan completion banner."""
+    """Post-scan completion banner."""
     score = max(0, round((1 - violations / max(frames, 1)) * 100, 1)) if frames > 0 else 100.0
+    score_color = GREEN if score >= 80 else AMBER if score >= 50 else RED
     st.markdown(f"""
-    <div style="
-        background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, {BG_ELEVATED} 100%);
-        border: 1px solid rgba(34,197,94,0.2);
-        border-radius: 14px;
-        padding: 50px 20px;
-        text-align: center;
-    ">
-        <div style="font-size:3rem;margin-bottom:14px;
-            filter:drop-shadow(0 0 18px rgba(34,197,94,0.35));">⛑️</div>
-        <div style="font-size:1rem;font-weight:800;color:#ffffff;
-            letter-spacing:0.5px;margin-bottom:6px;">SCAN SESSION COMPLETE</div>
+    <div style="background:var(--bg-surface);border:1px solid rgba(34,197,94,0.2);
+        border-top:3px solid {GREEN};border-radius:var(--radius);padding:50px 20px;text-align:center;">
+        <div style="font-size:2.8rem;margin-bottom:12px;filter:drop-shadow(0 0 16px rgba(34,197,94,0.3));">&#9937;</div>
+        <div style="font-size:0.95rem;font-weight:800;color:var(--text-1);letter-spacing:0.5px;margin-bottom:6px;">
+            SCAN SESSION COMPLETE</div>
         <div style="width:36px;height:2px;background:linear-gradient(90deg,{GREEN},{TEAL});
-            margin:0 auto 12px;"></div>
-        <p style="color:rgba(241,245,249,0.5);font-size:0.8rem;
-            max-width:420px;margin:0 auto;line-height:1.7;">
+            margin:0 auto 12px;border-radius:2px;"></div>
+        <p style="color:var(--text-muted);font-size:0.8rem;max-width:420px;margin:0 auto;line-height:1.7;">
             <b style="color:{GREEN};">{violations} unique violations</b> logged across
             <b style="color:{TEAL};">{frames} frames</b>
             {f'in <b style="color:{AMBER};">{duration}</b>' if duration else ''}.
-            Safety score: <b style="color:{ORANGE};">{score}%</b>
+            Safety score: <b style="color:{score_color};">{score}%</b>
         </p>
     </div>
     """, unsafe_allow_html=True)

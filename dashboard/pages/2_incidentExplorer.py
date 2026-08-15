@@ -9,7 +9,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip
+from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip, render_theme_toggle
 from db import DB_AVAILABLE, get_recent_sessions, get_session_violations, get_analytics
 
 st.set_page_config(
@@ -25,14 +25,15 @@ ORANGE = "#f97316"; RED = "#ef4444"; GREEN = "#22c55e"; TEAL = "#06b6d4"; AMBER 
 with st.sidebar:
     st.markdown("""
     <div style="text-align:center;padding:16px 0 10px;">
-        <div style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(249,115,22,0.4));">⛑️</div>
+        <div style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(249,115,22,0.4));">&#9937;</div>
         <div style="font-size:0.95rem;font-weight:800;color:#fff;letter-spacing:2px;">AEGIS AI</div>
         <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
             letter-spacing:2px;margin-top:2px;">Incident Explorer</div>
     </div>
     <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
-        margin:4px 0 14px;"></div>
+        margin:4px 0 10px;"></div>
     """, unsafe_allow_html=True)
+    render_theme_toggle()
     navigation_tip()
 
 mission_control_header(
