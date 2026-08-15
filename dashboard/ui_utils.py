@@ -439,30 +439,15 @@ def render_brand_header(is_scanning: bool = False, db_ok: bool = True):
         position: relative;
         overflow: hidden;
     ">
-        <!-- Orange accent bar -->
         <div style="position:absolute;top:0;left:0;right:0;height:3px;
             background:linear-gradient(90deg,{ORANGE},{AMBER},transparent);"></div>
-
-        <!-- Brand identity -->
         <div style="display:flex;align-items:center;gap:18px;">
-            <div style="
-                font-size:2.8rem;
-                filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));
-                line-height:1;
-            ">⛑️</div>
+            <div style="font-size:2.8rem;filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));line-height:1;">&#9937;</div>
             <div>
-                <div style="
-                    font-size:1.6rem;font-weight:900;color:#ffffff;
-                    letter-spacing:3px;line-height:1;
-                ">AEGIS</div>
-                <div style="
-                    font-size:0.65rem;color:rgba(241,245,249,0.4);
-                    text-transform:uppercase;letter-spacing:2.5px;margin-top:3px;
-                ">Construction Safety Intelligence</div>
+                <div style="font-size:1.6rem;font-weight:900;color:#ffffff;letter-spacing:3px;line-height:1;">AEGIS</div>
+                <div style="font-size:0.65rem;color:rgba(241,245,249,0.4);text-transform:uppercase;letter-spacing:2.5px;margin-top:3px;">Construction Safety Intelligence</div>
             </div>
         </div>
-
-        <!-- Status indicators -->
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div>{scan_indicator}</div>
             <div>{db_indicator}</div>
