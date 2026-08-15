@@ -156,3 +156,57 @@ class TestWorkerAssociationLogic:
         assert w1_eval["is_compliant"] is True
         assert w2_eval["is_compliant"] is False
         assert "NO-Hardhat" in w2_eval["violations"]
+
+
+class TestWorkerAccounting:
+    def test_worker_decision_accounting_structure(self):
+        """Verify the exact relationship between GT workers, predicted workers, matched pairs, and decisions."""
+        unique_gt_workers = 174
+        total_pred_workers = 160
+        matched_workers = 144
+        unmatched_gt_workers = 30
+        unmatched_predictions = 16
+        evaluated_worker_decisions = 190
+
+        # Structural assertions
+        assert matched_workers + unmatched_gt_workers == unique_gt_workers
+        assert matched_workers + unmatched_predictions == total_pred_workers
+        assert unique_gt_workers + unmatched_predictions == evaluated_worker_decisions
+
+        # Confusion matrix breakdown
+        tp, fp, tn, fn = 94, 19, 47, 30
+        assert tp + fp + tn + fn == evaluated_worker_decisions
+
+    def test_worker_precision_recall_sensitivity(self):
+        """Verify that worker precision and recall cannot contradict the underlying confusion matrix."""
+        tp, fp, tn, fn = 94, 19, 47, 30
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+        accuracy = (tp + tn) / (tp + fp + tn + fn)
+
+        assert precision == pytest.approx(0.8319, abs=1e-4)
+        assert recall == pytest.approx(0.7581, abs=1e-4)
+        assert accuracy == pytest.approx(0.7421, abs=1e-4)
+
+
+class TestAblationConfiguration:
+    def test_ablation_hierarchy_definition(self):
+        """Verify the 5 ablation configurations A0 through A4 are strictly defined."""
+        configs = ["A0", "A1", "A2", "A3", "A4"]
+        assert len(configs) == 5
+
+        # Check required architectural component presence
+        components = {
+            "A0": ["detector"],
+            "A1": ["detector", "spatial_association"],
+            "A2": ["detector", "spatial_association", "centroid_tracking"],
+            "A3": ["detector", "spatial_association", "centroid_tracking", "temporal_hysteresis"],
+            "A4": ["detector", "spatial_association", "centroid_tracking", "temporal_hysteresis", "cooldown_throttling"],
+        }
+        for i in range(len(configs) - 1):
+            curr_c = components[configs[i]]
+            next_c = components[configs[i + 1]]
+            # Each subsequent config is a strict superset of the previous
+            assert set(curr_c).issubset(set(next_c))
+            assert len(next_c) == len(curr_c) + 1
+

@@ -1,0 +1,90 @@
+{
+  "experiment": "AEGIS Architectural Component Ablation Study",
+  "timestamp": "2026-08-15 20:14:12",
+  "dataset_split": "D:\\safetyeye\\AI-Powered-Safety-At-Workplace-main\\infosys\\dataset\\css-data\\test",
+  "video_benchmark_source": "uploaded_video.mp4",
+  "configurations": {
+    "A0": "Base YOLOv8 Detector Only (Raw direct class thresholding)",
+    "A1": "Detector + Spatial PPE-Worker Association (Containment + Anatomy rules)",
+    "A2": "Detector + Spatial Association + Centroid Tracking (Persistent worker IDs)",
+    "A3": "Detector + Spatial Association + Tracking + Temporal Hysteresis Filter (N=3 confirm)",
+    "A4": "Full AEGIS Pipeline (Association + Tracking + Temporal Hysteresis + Cooldown Throttling)"
+  },
+  "ablation_results": [
+    {
+      "Configuration": "A0: Base YOLOv8 Detector Only",
+      "Evaluation Unit": "Frame-Level Negative Flag",
+      "Accuracy (%)": 93.9,
+      "Precision (%)": 97.78,
+      "Recall (%)": 91.67,
+      "F1-Score (%)": 94.63,
+      "FPR (%)": 2.94,
+      "FNR (%)": 8.33,
+      "Mean Latency (ms)": 270.15,
+      "P95 Latency (ms)": 386.33,
+      "FPS": 3.7,
+      "Generated Events (100 frames)": 51,
+      "Event Reduction vs A0 (%)": 0.0
+    },
+    {
+      "Configuration": "A1: + Spatial Person-PPE Association",
+      "Evaluation Unit": "Worker-Level Decision",
+      "Accuracy (%)": 74.21,
+      "Precision (%)": 83.19,
+      "Recall (%)": 75.81,
+      "F1-Score (%)": 79.33,
+      "FPR (%)": 28.79,
+      "FNR (%)": 24.19,
+      "Mean Latency (ms)": 270.41,
+      "P95 Latency (ms)": 386.41,
+      "FPS": 3.7,
+      "Generated Events (100 frames)": 224,
+      "Event Reduction vs A0 (%)": -339.22
+    },
+    {
+      "Configuration": "A2: + Centroid Tracking (Persistent IDs)",
+      "Evaluation Unit": "Tracked Worker Stream",
+      "Accuracy (%)": 74.21,
+      "Precision (%)": 83.19,
+      "Recall (%)": 75.81,
+      "F1-Score (%)": 79.33,
+      "FPR (%)": 28.79,
+      "FNR (%)": 24.19,
+      "Mean Latency (ms)": 197.58,
+      "P95 Latency (ms)": 286.27,
+      "FPS": 5.06,
+      "Generated Events (100 frames)": 224,
+      "Event Reduction vs A0 (%)": -339.22
+    },
+    {
+      "Configuration": "A3: + Temporal Hysteresis (N=3 Frame Confirm)",
+      "Evaluation Unit": "Temporally Confirmed Violations",
+      "Accuracy (%)": 74.21,
+      "Precision (%)": 83.19,
+      "Recall (%)": 75.81,
+      "F1-Score (%)": 79.33,
+      "FPR (%)": 28.79,
+      "FNR (%)": 24.19,
+      "Mean Latency (ms)": 197.6,
+      "P95 Latency (ms)": 286.32,
+      "FPS": 5.06,
+      "Generated Events (100 frames)": 222,
+      "Event Reduction vs A0 (%)": -335.29
+    },
+    {
+      "Configuration": "A4: Full AEGIS (Tracking + Temporal + Cooldown)",
+      "Evaluation Unit": "Actionable Alert Dispatches",
+      "Accuracy (%)": 74.21,
+      "Precision (%)": 83.19,
+      "Recall (%)": 75.81,
+      "F1-Score (%)": 79.33,
+      "FPR (%)": 28.79,
+      "FNR (%)": 24.19,
+      "Mean Latency (ms)": 197.55,
+      "P95 Latency (ms)": 286.22,
+      "FPS": 5.06,
+      "Generated Events (100 frames)": 21,
+      "Event Reduction vs A0 (%)": 58.82
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+Configuration,Evaluation Unit,Accuracy (%),Precision (%),Recall (%),F1-Score (%),FPR (%),FNR (%),Mean Latency (ms),P95 Latency (ms),FPS,Generated Events (100 frames),Event Reduction vs A0 (%)
+A0: Base YOLOv8 Detector Only,Frame-Level Negative Flag,93.9,97.78,91.67,94.63,2.94,8.33,270.15,386.33,3.7,51,0.0
+A1: + Spatial Person-PPE Association,Worker-Level Decision,74.21,83.19,75.81,79.33,28.79,24.19,270.41,386.41,3.7,224,-339.22
+A2: + Centroid Tracking (Persistent IDs),Tracked Worker Stream,74.21,83.19,75.81,79.33,28.79,24.19,197.58,286.27,5.06,224,-339.22
+A3: + Temporal Hysteresis (N=3 Frame Confirm),Temporally Confirmed Violations,74.21,83.19,75.81,79.33,28.79,24.19,197.6,286.32,5.06,222,-335.29
+A4: Full AEGIS (Tracking + Temporal + Cooldown),Actionable Alert Dispatches,74.21,83.19,75.81,79.33,28.79,24.19,197.55,286.22,5.06,21,58.82

@@ -140,13 +140,16 @@ def evaluate_compliance(
     per_type_metrics = {vname: {"TP": 0, "FP": 0, "TN": 0, "FN": 0} for vname in violation_names}
     detailed_frame_records = []
 
-    # 2. Worker-Level Counters
+    # 2. Worker-Level Counters & Accounting
     worker_tp = 0
     worker_fp = 0
     worker_tn = 0
     worker_fn = 0
     total_gt_workers_count = 0
     total_pred_workers_count = 0
+    matched_workers_count = 0
+    unmatched_gt_workers_count = 0
+    unmatched_pred_workers_count = 0
     detailed_worker_records = []
 
     for img_path in img_files:
@@ -268,6 +271,7 @@ def evaluate_compliance(
 
             if best_p_idx >= 0 and best_iou >= 0.50:
                 matched_pred_indices.add(best_p_idx)
+                matched_workers_count += 1
                 pr_w = pred_worker_states[best_p_idx]
                 pr_is_viol = not pr_w["is_compliant"]
 
@@ -295,6 +299,7 @@ def evaluate_compliance(
                 })
             else:
                 # Missed GT Person Detection
+                unmatched_gt_workers_count += 1
                 if gt_is_viol:
                     worker_fn += 1
                     w_cat = "False Negative (Missed Person Detection)"
@@ -315,6 +320,7 @@ def evaluate_compliance(
         # Spurious predicted workers (False Alarms)
         for p_idx, pr_w in enumerate(pred_worker_states):
             if p_idx not in matched_pred_indices:
+                unmatched_pred_workers_count += 1
                 if not pr_w["is_compliant"]:
                     worker_fp += 1
                     w_cat = "False Positive (Spurious Worker Detection)"
@@ -332,11 +338,43 @@ def evaluate_compliance(
                     "decision_category": w_cat,
                 })
 
+    # Total evaluated decisions
+    evaluated_worker_decisions = worker_tp + worker_fp + worker_tn + worker_fn
+
+    # Automated structural assertions
+    assert matched_workers_count + unmatched_gt_workers_count == total_gt_workers_count, (
+        f"Mismatch: {matched_workers_count} + {unmatched_gt_workers_count} != {total_gt_workers_count}"
+    )
+    assert matched_workers_count + unmatched_pred_workers_count == total_pred_workers_count, (
+        f"Mismatch: {matched_workers_count} + {unmatched_pred_workers_count} != {total_pred_workers_count}"
+    )
+    assert evaluated_worker_decisions == total_gt_workers_count + unmatched_pred_workers_count, (
+        f"Mismatch: {evaluated_worker_decisions} != {total_gt_workers_count} + {unmatched_pred_workers_count}"
+    )
+    assert len(detailed_worker_records) == evaluated_worker_decisions, (
+        f"Record count mismatch: {len(detailed_worker_records)} vs {evaluated_worker_decisions}"
+    )
+
     # Compute Frame-Level Metrics
     frame_metrics = compute_binary_metrics(frame_tp, frame_fp, frame_tn, frame_fn)
 
     # Compute Worker-Level Metrics
     worker_metrics = compute_binary_metrics(worker_tp, worker_fp, worker_tn, worker_fn)
+
+    # Automated metric formula assertions
+    w_acc_expected = round((worker_tp + worker_tn) / evaluated_worker_decisions, 4)
+    w_prec_expected = round(worker_tp / (worker_tp + worker_fp), 4)
+    w_rec_expected = round(worker_tp / (worker_tp + worker_fn), 4)
+    w_spec_expected = round(worker_tn / (worker_tn + worker_fp), 4)
+    w_fpr_expected = round(worker_fp / (worker_fp + worker_tn), 4)
+    w_fnr_expected = round(worker_fn / (worker_tp + worker_fn), 4)
+
+    assert worker_metrics["accuracy"] == w_acc_expected, f"Accuracy mismatch: {worker_metrics['accuracy']} vs {w_acc_expected}"
+    assert worker_metrics["precision"] == w_prec_expected, f"Precision mismatch: {worker_metrics['precision']} vs {w_prec_expected}"
+    assert worker_metrics["recall_sensitivity"] == w_rec_expected, f"Recall mismatch: {worker_metrics['recall_sensitivity']} vs {w_rec_expected}"
+    assert worker_metrics["specificity"] == w_spec_expected, f"Specificity mismatch: {worker_metrics['specificity']} vs {w_spec_expected}"
+    assert worker_metrics["false_positive_rate_fpr"] == w_fpr_expected, f"FPR mismatch: {worker_metrics['false_positive_rate_fpr']} vs {w_fpr_expected}"
+    assert worker_metrics["false_negative_rate_miss_rate"] == w_fnr_expected, f"FNR mismatch: {worker_metrics['false_negative_rate_miss_rate']} vs {w_fnr_expected}"
 
     # Per violation category breakdown (Frame-Level)
     per_type_rows = []
@@ -356,7 +394,7 @@ def evaluate_compliance(
         })
     per_type_df = pd.DataFrame(per_type_rows)
 
-    # Master compliance report with distinct Frame-Level and Worker-Level scopes
+    # Master compliance report with distinct Frame-Level and Worker-Level scopes and exact accounting
     compliance_report = {
         "experiment": "PPE Compliance Decision Engine Evaluation (Frame & Worker Level)",
         "timestamp": get_hardware_info()["timestamp"],
@@ -380,13 +418,17 @@ def evaluate_compliance(
             },
         },
         "worker_level_evaluation": {
-            "total_ground_truth_workers": total_gt_workers_count,
+            "unique_ground_truth_workers": total_gt_workers_count,
             "total_predicted_workers": total_pred_workers_count,
+            "matched_workers": matched_workers_count,
+            "unmatched_ground_truth_workers": unmatched_gt_workers_count,
+            "unmatched_predictions": unmatched_pred_workers_count,
+            "evaluated_worker_decisions": evaluated_worker_decisions,
             "confusion_matrix": {
-                "TP_correct_worker_violations": worker_tp,
-                "FP_false_alarms_on_workers": worker_fp,
-                "TN_correct_compliant_workers": worker_tn,
-                "FN_missed_worker_hazards": worker_fn,
+                "TP": worker_tp,
+                "FP": worker_fp,
+                "TN": worker_tn,
+                "FN": worker_fn,
             },
             "metrics": {
                 "worker_compliance_decision_accuracy": worker_metrics["accuracy"],
@@ -420,14 +462,20 @@ def evaluate_compliance(
     print(f"     FNR:         {frame_metrics['false_negative_rate_miss_rate']:.4f} ({frame_metrics['false_negative_rate_miss_rate']*100:.2f}%)")
     print(f"     CM: TP={frame_tp}, FP={frame_fp}, TN={frame_tn}, FN={frame_fn}")
     print("-" * 70)
-    print(f" [2] WORKER-LEVEL PPE COMPLIANCE METRICS (N={total_gt_workers_count} GT Workers):")
+    print(f" [2] WORKER-LEVEL PPE COMPLIANCE METRICS:")
+    print(f"     Ground Truth Workers:        {total_gt_workers_count}")
+    print(f"     Predicted Workers:           {total_pred_workers_count}")
+    print(f"     Matched Pairs (IoU>=0.50):   {matched_workers_count}")
+    print(f"     Unmatched GT Workers:        {unmatched_gt_workers_count}")
+    print(f"     Unmatched Predicted Workers: {unmatched_pred_workers_count}")
+    print(f"     Total Evaluated Decisions:   {evaluated_worker_decisions}")
+    print(f"     Confusion Matrix: TP={worker_tp}, FP={worker_fp}, TN={worker_tn}, FN={worker_fn}")
     print(f"     Accuracy:    {worker_metrics['accuracy']:.4f} ({worker_metrics['accuracy']*100:.2f}%)")
     print(f"     Precision:   {worker_metrics['precision']:.4f} ({worker_metrics['precision']*100:.2f}%)")
     print(f"     Recall:      {worker_metrics['recall_sensitivity']:.4f} ({worker_metrics['recall_sensitivity']*100:.2f}%)")
     print(f"     F1-Score:    {worker_metrics['f1_score']:.4f} ({worker_metrics['f1_score']*100:.2f}%)")
     print(f"     FPR:         {worker_metrics['false_positive_rate_fpr']:.4f} ({worker_metrics['false_positive_rate_fpr']*100:.2f}%)")
     print(f"     FNR:         {worker_metrics['false_negative_rate_miss_rate']:.4f} ({worker_metrics['false_negative_rate_miss_rate']*100:.2f}%)")
-    print(f"     CM: TP={worker_tp}, FP={worker_fp}, TN={worker_fp+worker_tn-worker_fp}, FN={worker_fn}")
     print("=" * 70 + "\n")
 
     return compliance_report
