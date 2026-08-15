@@ -24,7 +24,7 @@
     </script>
 </head>
 <body>
-    <video id="video" width="640" height="480" autoplay playsinline style="display:none;"></video>
+    <video id="video" width="640" height="480" autoplay playsinline muted style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
     <script>
@@ -33,7 +33,8 @@
         const ctx = canvas.getContext('2d');
         let stream = null;
         let isReady = false;
-        let isProcessing = false;
+        let inFlight = false;
+        let lastSendTime = 0;
 
         // Initialize camera
         navigator.mediaDevices.getUserMedia({
@@ -47,11 +48,15 @@
         .then(function(s) {
             stream = s;
             video.srcObject = s;
-            video.onloadedmetadata = function() {
+            video.setAttribute("playsinline", true);
+            video.play().then(function() {
                 isReady = true;
-                // Capture first frame
                 captureAndSend();
-            };
+            }).catch(function(e) {
+                console.log("Play catch:", e);
+                isReady = true;
+                captureAndSend();
+            });
         })
         .catch(function(err) {
             console.error("Camera error:", err);
@@ -59,31 +64,43 @@
         });
 
         function captureAndSend() {
-            if (!isReady || isProcessing) return;
-            isProcessing = true;
+            if (!isReady) return;
+            const now = Date.now();
+            // Allow sending if not in flight, OR if previous frame has been in flight for over 250ms (watchdog)
+            if (inFlight && (now - lastSendTime < 250)) {
+                return;
+            }
+            inFlight = true;
+            lastSendTime = now;
             
             try {
-                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                if (video.readyState >= 2) { // HAVE_CURRENT_DATA or higher
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.6); // Compress to save bandwidth
+                    const base64 = canvas.toDataURL('image/jpeg', 0.55);
                     sendMessage("streamlit:setComponentValue", { value: base64 });
                 } else {
-                    isProcessing = false;
-                    setTimeout(captureAndSend, 100);
+                    inFlight = false;
                 }
             } catch (e) {
                 console.error("Capture error:", e);
-                isProcessing = false;
+                inFlight = false;
             }
         }
 
+        // Watchdog interval: continuously pushes frames every 90ms so the camera NEVER stops
+        setInterval(function() {
+            if (isReady) {
+                captureAndSend();
+            }
+        }, 90);
+
         // Listen for parent messages (Streamlit Renders)
         window.addEventListener("message", function(event) {
-            if (event.data.type === "streamlit:render") {
-                // Parent finished rendering, ready for next frame!
-                isProcessing = false;
-                // Wait 150ms to prevent CPU throttling and allow clean rendering
-                setTimeout(captureAndSend, 150);
+            if (event.data && event.data.type === "streamlit:render") {
+                inFlight = false;
+                if (isReady) {
+                    setTimeout(captureAndSend, 30);
+                }
             }
         });
     </script>
