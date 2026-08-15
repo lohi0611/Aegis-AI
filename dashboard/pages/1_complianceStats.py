@@ -63,11 +63,14 @@ df_raw = load_data()
 
 # ===================== SIDEBAR FILTERS =====================
 with st.sidebar:
-    st.markdown('<div style="text-align: center; margin-bottom: 20px;"><span style="font-size: 2.2rem; filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.35));">📊</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1.3rem; font-weight: 800; color: #ffffff; text-align: center; letter-spacing: 2px; margin-bottom: 5px;">ANALYTICS</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px;">Safety Audit Sub-Node</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
+    st.markdown("""
+    <div style="text-align:center; padding: 20px 0 10px;">
+        <div style="font-size:2.4rem; margin-bottom:8px; filter: drop-shadow(0 0 16px rgba(59,130,246,0.5));">📊</div>
+        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; letter-spacing:1.5px;">AEGIS ANALYTICS</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:2px; margin-top:3px;">Safety Audit Sub-Node</div>
+    </div>
+    <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(96,165,250,0.2), transparent); margin: 10px 0 16px;"></div>
+    """, unsafe_allow_html=True)
     st.markdown("### 📅 DATE FILTER")
     
     if not df_raw.empty:
@@ -99,8 +102,10 @@ with st.sidebar:
     st.info("💡 **Navigation:** Use the sidebar menu to return to **Operations Command** or go to the **Incident Explorer**.")
 
 # ===================== TITLE HEADER =====================
-mission_control_header("AEGIS <span style='color:#58a6ff;'>STRATEGIC ANALYTICS</span>", 
-                      "OPERATIONAL VIOLATION HEATMAPS & SAFETY PERFORMANCE INTELLIGENCE")
+mission_control_header(
+    "AEGIS <span style='background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'>STRATEGIC</span> ANALYTICS",
+    "OPERATIONAL VIOLATION HEATMAPS & SAFETY PERFORMANCE INTELLIGENCE"
+)
 
 # Check if data is empty
 if df_raw.empty:
@@ -162,7 +167,7 @@ st.markdown('<div style="height: 15px;"></div>', unsafe_allow_html=True)
 col_c1, col_c2 = st.columns([1.2, 1.8])
 
 with col_c1:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">📊 Compliance Gauge</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📊 Compliance Score</div>', unsafe_allow_html=True)
     
     # Custom Dial Gauge Chart using Plotly
     fig_gauge = go.Figure(go.Indicator(
@@ -190,15 +195,16 @@ with col_c1:
     ))
     
     fig_gauge.update_layout(
-        height=220,
-        margin=dict(l=20, r=20, t=10, b=10),
+        height=240,
+        margin=dict(l=20, r=20, t=20, b=20),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(family="Inter", color="#e2e8f0")
     )
     st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False}, key="gauge_chart")
 
 with col_c2:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">⚠️ Category Breakdown</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">⚠️ Category Breakdown</div>', unsafe_allow_html=True)
     if not df.empty:
         type_counts = df["violation_type"].value_counts().reset_index()
         type_counts.columns = ["Violation Type", "Count"]
@@ -224,12 +230,14 @@ with col_c2:
         )
         
         fig_donut.update_layout(
-            height=220,
+            height=240,
             margin=dict(l=0, r=0, t=10, b=10),
             paper_bgcolor="rgba(0,0,0,0)",
             plot_bgcolor="rgba(0,0,0,0)",
-            showlegend=False,
-            template="plotly_dark"
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5, font=dict(color="rgba(255,255,255,0.5)", size=11)),
+            template="plotly_dark",
+            font=dict(family="Inter")
         )
         st.plotly_chart(fig_donut, use_container_width=True, config={'displayModeBar': False}, key="donut_chart")
     else:
@@ -240,7 +248,7 @@ st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 col_h1, col_h2 = st.columns([1.8, 1.2])
 
 with col_h1:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">🔥 Breach Intensity Heatmap</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🔥 Breach Intensity Heatmap</div>', unsafe_allow_html=True)
     if not df.empty:
         df['hour'] = df['timestamp'].dt.hour
         df['day_name'] = df['timestamp'].dt.day_name()
@@ -280,7 +288,7 @@ with col_h1:
         st.info("No data available for heatmap.")
 
 with col_h2:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">👷 Worker Compliance</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">👷 Worker Violations</div>', unsafe_allow_html=True)
     if not df.empty and "worker_id" in df.columns:
         # Tally active violations per worker
         worker_violations = df[df["status"] == "Violation"]["worker_id"].value_counts().reset_index()
@@ -318,7 +326,7 @@ st.markdown("---")
 col_s1, col_s2 = st.columns([2.2, 1])
 
 with col_s1:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">🧠 Safety Command Advisor</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">🧠 Safety Command Advisor</div>', unsafe_allow_html=True)
     
     # Dynamically generate reports
     if compliance_score > 93:
@@ -350,7 +358,7 @@ with col_s1:
         """.format(score=compliance_score), unsafe_allow_html=True)
 
 with col_s2:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">💾 Export Logs</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">💾 Export</div>', unsafe_allow_html=True)
     if not df.empty:
         # Convert filtered df back to CSV representation
         csv_data = df.to_csv(index=False).encode('utf-8')
@@ -363,3 +371,4 @@ with col_s2:
         )
     else:
         st.info("No data available to export.")
+        

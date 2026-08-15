@@ -73,11 +73,14 @@ if not os.path.isfile(LOG_CSV):
 
 # ===================== SIDEBAR =====================
 with st.sidebar:
-    st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 2.2rem;">🛡️</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1.25rem; font-weight: 800; color: #ffffff; text-align: center; letter-spacing: 1px; margin-bottom: 4px;">AegisAI Safety</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 0.75rem; color: #9ca3af; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 20px;">Workplace Monitoring Station</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
+    st.markdown("""
+    <div style="text-align:center; padding: 20px 0 10px;">
+        <div style="font-size:2.4rem; margin-bottom:8px; filter: drop-shadow(0 0 16px rgba(59,130,246,0.5));">🛡️</div>
+        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; letter-spacing:1.5px;">AEGIS AI</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:2px; margin-top:3px;">Safety Intelligence Platform</div>
+    </div>
+    <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(96,165,250,0.2), transparent); margin: 10px 0 16px;"></div>
+    """, unsafe_allow_html=True)
     
     st.markdown("### ⚙️ CONFIGURATION")
     
@@ -125,8 +128,10 @@ with st.sidebar:
     navigation_tip()
 
 # ===================== MAIN HEADER =====================
-mission_control_header("AEGIS AI <span style='color:#3b82f6;'>SAFETY CONTROL</span>", 
-                      "REAL-TIME PPE COMPLIANCE SURVEILLANCE & INCIDENT MONITORING")
+mission_control_header(
+    "AEGIS <span style='background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'>AI SAFETY</span> CONTROL",
+    "REAL-TIME PPE COMPLIANCE SURVEILLANCE & INCIDENT MONITORING"
+)
 
 # ===================== KPI BANNER =====================
 col_k1, col_k2, col_k3, col_k4 = st.columns(4)
@@ -150,12 +155,11 @@ st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 col_left, col_right = st.columns([2.5, 1.2])
 
 with col_left:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#3b82f6;">📹 Live Feed Stream</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📹 Live Feed Stream</div>', unsafe_allow_html=True)
     video_ph = st.empty()
 
 with col_right:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#3b82f6;">📋 Recent Alerts</h3>', unsafe_allow_html=True)
-    # Scrollable container for incident stream
+    st.markdown('<div class="section-title">🚨 Recent Alerts</div>', unsafe_allow_html=True)
     feed_ph = st.container()
 
 # ===================== CHICKLET FEED & LOGS =====================
@@ -163,11 +167,11 @@ st.markdown("---")
 c_metrics, c_logs = st.columns([1.5, 2.2])
 
 with c_metrics:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">📈 Stream Performance Timeline</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📈 Stream Performance</div>', unsafe_allow_html=True)
     metrics_chart_ph = st.empty()
 
 with c_logs:
-    st.markdown('<h3 style="margin-bottom:15px; font-weight:600; color:#58a6ff;">📋 Real-time Audit Log</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📋 Real-time Audit Log</div>', unsafe_allow_html=True)
     logs_ph = st.empty()
 
 # Initialize dataframes & chart placeholders
@@ -418,14 +422,22 @@ else:
     
     # Standby video placeholder: show a clean professional interface
     video_ph.markdown("""
-    <div style="background-color:#111827; border: 1px dashed #374151; border-radius:12px; padding: 70px 20px; text-align:center;">
-        <div style="font-size:3.5rem; margin-bottom: 15px;">📹</div>
-        <h3 style="color:#ffffff; font-weight:700; margin-bottom: 8px;">CAMERA STREAM STANDBY</h3>
-        <p style="color:#9ca3af; font-size:0.875rem; max-width:420px; margin: 0 auto;">
-            Camera stream is currently offline. Select an input source in the sidebar and click <b>START SCAN</b> to begin real-time safety monitoring.
+    <div style="
+        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+        border: 1px dashed rgba(96,165,250,0.2);
+        border-radius: 16px;
+        padding: 80px 20px;
+        text-align: center;
+        box-shadow: inset 0 0 60px rgba(59,130,246,0.03);
+    ">
+        <div style="font-size:3.5rem; margin-bottom:18px; filter:drop-shadow(0 0 20px rgba(59,130,246,0.4));">📹</div>
+        <div style="font-size:1.1rem; font-weight:800; color:#ffffff; letter-spacing:0.5px; margin-bottom:10px;">CAMERA STREAM STANDBY</div>
+        <div style="width:40px; height:2px; background:linear-gradient(90deg,#3b82f6,#8b5cf6); margin:0 auto 14px;"></div>
+        <p style="color:rgba(255,255,255,0.35); font-size:0.82rem; max-width:380px; margin:0 auto; line-height:1.6;">
+            Select an input source from the sidebar and click <b style="color:#60a5fa;">▶ START SCAN</b> to begin real-time safety monitoring.
         </p>
     </div>
     """, unsafe_allow_html=True)
-    
+
     # Draw empty metrics logs
     draw_empty_metrics()

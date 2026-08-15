@@ -93,11 +93,14 @@ def update_incident_status(row_idx, new_status):
 
 # ===================== SIDEBAR FILTERS =====================
 with st.sidebar:
-    st.markdown('<div style="text-align: center; margin-bottom: 20px;"><span style="font-size: 2.2rem; filter: drop-shadow(0 0 10px rgba(88, 166, 255, 0.35));">🚨</span></div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 1.3rem; font-weight: 800; color: #ffffff; text-align: center; letter-spacing: 2px; margin-bottom: 5px;">EXPLORER</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-align: center; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 25px;">Database Query Console</div>', unsafe_allow_html=True)
-    
-    st.markdown("---")
+    st.markdown("""
+    <div style="text-align:center; padding: 20px 0 10px;">
+        <div style="font-size:2.4rem; margin-bottom:8px; filter: drop-shadow(0 0 16px rgba(239,68,68,0.5));">🚨</div>
+        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; letter-spacing:1.5px;">AEGIS EXPLORER</div>
+        <div style="font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:2px; margin-top:3px;">Database Query Console</div>
+    </div>
+    <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent); margin: 10px 0 16px;"></div>
+    """, unsafe_allow_html=True)
     st.markdown("### 🔍 SEARCH & QUERY")
     
     # Search input
@@ -127,8 +130,10 @@ with st.sidebar:
     st.info("💡 **Tip:** Clicking Resolve/Dismiss on any card will instantly update the safety record in `violations.csv`.")
 
 # ===================== TITLE HEADER =====================
-mission_control_header("AEGIS <span style='color:#f85149;'>INCIDENT LOG EXPLORER</span>", 
-                      "SECURE SURVEILLANCE SNAPSHOT AUDITS & INTERACTIVE INCIDENT RESOLUTION")
+mission_control_header(
+    "AEGIS <span style='background:linear-gradient(135deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'>INCIDENT LOG</span> EXPLORER",
+    "SECURE SURVEILLANCE SNAPSHOT AUDITS & INTERACTIVE INCIDENT RESOLUTION"
+)
 
 # Empty check
 if df_raw.empty:
