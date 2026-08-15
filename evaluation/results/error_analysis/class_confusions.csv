@@ -1,0 +1,8 @@
+gt_class,pred_class,conf,image
+Safety Vest,NO-Safety Vest,0.43,004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg
+NO-Safety Vest,Person,0.294,2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg
+Hardhat,Safety Vest,0.434,IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg
+Hardhat,NO-Hardhat,0.563,NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg
+Safety Vest,Hardhat,0.341,youtube-471_jpg.rf.4296b7bd9a5a07753077beddbcd651bf.jpg
+vehicle,machinery,0.491,youtube-53_jpg.rf.e96f8f81389f4e63a79663095680a617.jpg
+Safety Vest,NO-Safety Vest,0.339,youtube-596_jpg.rf.11a8a4ac01d8aadb80eeb0406dfa579a.jpg

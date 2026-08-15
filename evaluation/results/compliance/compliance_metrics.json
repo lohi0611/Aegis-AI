@@ -1,0 +1,58 @@
+{
+  "experiment": "PPE Compliance Decision Engine Evaluation",
+  "timestamp": "2026-08-15 19:03:05",
+  "dataset_split": "D:\\safetyeye\\AI-Powered-Safety-At-Workplace-main\\infosys\\dataset\\css-data\\test",
+  "total_evaluated_frames": 82,
+  "confusion_matrix": {
+    "TP_correct_violations": 44,
+    "FP_false_alarms": 1,
+    "TN_correct_compliant": 33,
+    "FN_missed_hazards": 4
+  },
+  "compliance_decision_metrics": {
+    "overall_compliance_accuracy": 0.939,
+    "violation_precision": 0.9778,
+    "violation_recall_sensitivity": 0.9167,
+    "violation_f1_score": 0.9462,
+    "false_positive_rate_fpr": 0.0294,
+    "false_negative_rate_miss_rate": 0.0833
+  },
+  "per_violation_category_metrics": [
+    {
+      "violation_type": "NO-Mask",
+      "TP": 25,
+      "FP": 0,
+      "TN": 52,
+      "FN": 5,
+      "accuracy": 0.939,
+      "precision": 1.0,
+      "recall": 0.8333,
+      "f1_score": 0.9091,
+      "miss_rate_fnr": 0.1667
+    },
+    {
+      "violation_type": "NO-Hardhat",
+      "TP": 21,
+      "FP": 0,
+      "TN": 57,
+      "FN": 4,
+      "accuracy": 0.9512,
+      "precision": 1.0,
+      "recall": 0.84,
+      "f1_score": 0.913,
+      "miss_rate_fnr": 0.16
+    },
+    {
+      "violation_type": "NO-Safety Vest",
+      "TP": 32,
+      "FP": 2,
+      "TN": 44,
+      "FN": 4,
+      "accuracy": 0.9268,
+      "precision": 0.9412,
+      "recall": 0.8889,
+      "f1_score": 0.9143,
+      "miss_rate_fnr": 0.1111
+    }
+  ]
+}

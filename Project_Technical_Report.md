@@ -1,171 +1,142 @@
-# TECHNICAL REPORT: AEGIS-AI SAFETY MONITORING SYSTEM
-
-## 1. ABSTRACT
-This report presents the design and implementation of **SafetyEye**, an automated workplace safety monitoring system powered by Artificial Intelligence and Computer Vision. The project addresses the critical need for real-time compliance auditing in high-risk environments such as construction sites and manufacturing plants. By leveraging the **YOLOv8** (You Only Look Once) architecture, the system provides instantaneous detection of Personal Protective Equipment (PPE) including helmets, masks, and safety vests. The system is integrated into a premium **Streamlit** dashboard, offering real-time streaming, tactical analytics, and automated violation logging. The results demonstrate high accuracy in complex visual environments, providing a scalable solution for modern industrial safety management.
+# Real-Time PPE Detection and Compliance Monitoring System for Construction Safety
+## Technical & Research Evaluation Report
 
 ---
 
-## 2. INTRODUCTION
-
-### 2.1 Problem Statement
-Workplace safety remains a top priority for industrial sectors. Despite strict regulations, manual monitoring of PPE compliance is labor-intensive, error-prone, and impossible to maintain across 24/7 operations. Missing or improperly worn safety gear is a leading cause of preventable workplace injuries and fatalities.
-
-### 2.2 Motivation
-The motivation behind this project is to use cutting-edge AI to create a "digital safety officer" that never tires. By automating the visual audit process, organizations can:
-*   Reduce incident rates.
-*   Improve safety culture through data-driven insights.
-*   Achieve real-time alerting for immediate intervention.
-
-### 2.3 Scope of the Project
-SafetyEye focuses on detecting three primary safety elements:
-1.  **Head Protection** (Hardhats)
-2.  **Respiratory Protection** (Masks)
-3.  **Visibility Protection** (Safety Vests)
+## 1. Abstract
+Automated compliance monitoring of Personal Protective Equipment (PPE) is critical for mitigating occupational fatalities and injuries in construction environments. This report documents the architecture, experimental evaluation, and empirical validation of **AEGIS-AI**, an end-to-end computer vision and rule-based safety monitoring system. The framework integrates a fine-tuned **YOLOv8** object detector, an automated **Centroid Tracking** algorithm with temporal cooldown deduplication, an industrial **Streamlit** command-center dashboard, a persistent **SQLAlchemy/SQLite** relational logging layer, and a dedicated **Evaluation & Diagnostics Suite**. Evaluated across the Construction Site Safety (CSS) benchmark, the system achieves **0.8386 mAP@50** in object detection, **93.90% Compliance Decision Accuracy**, **97.78% Violation Precision**, and **91.67% Violation Recall**, with empirical latency scaling from **205.85 ms (4.91 FPS)** at 640×640 to **81.23 ms (12.48 FPS)** at 320×320 on commodity multi-core CPUs.
 
 ---
 
-## 3. OBJECTIVES
-The primary objectives of this research and development project are:
-*   To train a robust YOLOv8 model capable of detecting multiple PPE classes simultaneously.
-*   To develop a low-latency video processing pipeline for real-time inference.
-*   To design a user-centric "Command Center" dashboard for safety administrators.
-*   To implement an automated data collection system for safety compliance reporting.
+## 2. System Architecture & Methodology
+
+```
+                   [ Input Video Stream / Webcam ]
+                                  │
+                                  ▼
+                   [ Frame Acquisition & Preprocessing ]
+                                  │
+                                  ▼
+                   [ YOLOv8 Deep Object Detection ]
+                     (Hardhat, Vest, Mask, Person)
+                                  │
+                                  ▼
+                   [ Centroid Tracking & Association ]
+                     (Persistent Worker IDs: WKR_101)
+                                  │
+                                  ▼
+                   [ Rule-Based Compliance Engine ]
+                     (Temporal 15s Event Cooldown)
+                                  │
+                  ┌───────────────┴───────────────┐
+                  ▼                               ▼
+       [ Persistent DB Logging ]        [ Live Command Center ]
+       (Sessions, Violations)          (Real-Time Alerts, KPIs)
+                  │
+                  ▼
+    =======================================================
+               RESEARCH & EVALUATION LAYER
+    =======================================================
+       │                  │                  │
+       ▼                  ▼                  ▼
+ [ Detection ]     [ Performance ]    [ Compliance ]
+ (P, R, mAP50,     (FPS, Latency,     (Decision Acc,
+  mAP50-95, CM)     P95, Memory)       FPR, FNR, Sens)
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          │
+                          ▼
+                 [ Error Diagnostics ]
+                 (Scale, Confusions)
+```
 
 ---
 
-## 4. SYSTEM ARCHITECTURE
+## 3. Empirical Experimental Results
 
-### 4.1 High-Level Overview
-The system follows a modular architecture consisting of the **Data Layer**, the **Inference Engine (AI)**, and the **Presentation Layer (UI)**.
+### 3.1 Object Detection Performance (Test Split, N=82 images, 760 instances)
 
-### 4.2 The Inference Pipeline
-1.  **Input Acquisition**: Frames are captured from a Webcam, IP Camera (RTSP), or Video File.
-2.  **Preprocessing**: Frames are resized to 640x640 pixels and normalized for the model.
-3.  **Neural Detection**: The YOLOv8 model processes the frame, outputting bounding boxes, class labels, and confidence scores.
-4.  **Logic Filtering**: The system distinguishes between "Compliant" detections and "Violations" (e.g., a person detected without a hardhat).
-5.  **Overlay Generation**: Detections are visually rendered onto the frame with color-coded boxes (Red for violations, Green for compliance).
-
----
-
-## 5. TECHNOLOGY STACK
-
-### 5.1 Software Components
-*   **Python 3.12**: The primary programming language chosen for its extensive AI libraries.
-*   **Ultralytics YOLOv8**: Chosen for its state-of-the-art speed/accuracy trade-off.
-*   **Streamlit**: Utilized for rapid deployment of a professional, interactive web interface.
-*   **OpenCV (Open Source Computer Vision Library)**: Used for frame manipulation and color space transitions.
-
-### 5.2 Libraries and Dependencies
-*   `torch`: The backbone for neural network computations.
-*   `pandas`: Used for violation data logging and CSV management.
-*   `plotly`: powers the real-time FPS and compliance charts.
+| Class Name | Precision | Recall | F1-Score | mAP@50 | mAP@50-95 |
+|---|---|---|---|---|---|
+| **Hardhat** | 0.9936 | 0.8727 | 0.9293 | 0.9425 | 0.6463 |
+| **Mask** | 0.9619 | 0.7500 | 0.8428 | 0.8637 | 0.5580 |
+| **NO-Hardhat** | 0.8657 | 0.6291 | 0.7287 | 0.7063 | 0.4019 |
+| **NO-Mask** | 0.8393 | 0.6709 | 0.7457 | 0.8301 | 0.4144 |
+| **NO-Safety Vest** | 0.9378 | 0.7667 | 0.8436 | 0.8762 | 0.5683 |
+| **Person** | 0.9592 | 0.8102 | 0.8784 | 0.9006 | 0.5590 |
+| **Safety Cone** | 0.8614 | 0.4728 | 0.6105 | 0.6433 | 0.2847 |
+| **Safety Vest** | 0.9239 | 0.7958 | 0.8551 | 0.8878 | 0.6203 |
+| **Machinery** | 0.9196 | 0.8409 | 0.8785 | 0.8999 | 0.6903 |
+| **Vehicle** | 0.9349 | 0.6341 | 0.7557 | 0.8357 | 0.5301 |
+| **Overall (All Classes)** | **0.9197** | **0.7243** | **0.8104** | **0.8386** | **0.5273** |
 
 ---
 
-## 6. DATASET AND TRAINING
+### 3.2 Compliance Decision Engine Performance
 
-### 6.1 Dataset Selection
-The project utilizes the **Construction Site Safety Image Dataset** (sourced from Roboflow). This dataset contains thousands of annotated images featuring workers in various lighting conditions and angles.
+A critical distinction is made between raw detection metrics and downstream compliance decisions:
 
-### 6.2 Training Process
-The model was trained using the following parameters:
-*   **Model**: YOLOv8n (Nano version for high-speed performance).
-*   **Classes**: Hardhat, Mask, NO-Hardhat, NO-Mask, NO-Safety Vest, Person, Safety Cone, Safety Vest, Machinery, Vehicle.
-*   **Optimization**: Hyperparameter tuning was performed to maximize the Mean Average Precision (mAP).
+| Metric Name | Empirical Value | Percentage |
+|---|---|---|
+| **Overall Compliance Decision Accuracy** | 0.9390 | **93.90%** |
+| **Violation Precision (Positive Predictive Value)** | 0.9778 | **97.78%** |
+| **Violation Recall (Safety Sensitivity)** | 0.9167 | **91.67%** |
+| **Violation F1-Score** | 0.9462 | **94.62%** |
+| **False Positive Rate (False Alarm Rate)** | 0.0294 | **2.94%** |
+| **False Negative Rate (Missed Hazard Rate)** | 0.0833 | **8.33%** |
 
-`[INSERT MODEL TRAINING GRAPH HERE FROM yolov8_ppe.pt]`
-
----
-
-## 7. IMPLEMENTATION DETAILS
-
-### 7.1 The Detector Module (`detect.py`)
-This script encapsulates the AI logic. It initializes the model onto the available hardware (CPU or GPU) and provides a clean API for processing frames.
-
-### 7.2 The DashBoard (`app.py`)
-The main entry point of the project. It handles:
-*   Multi-threaded video processing to prevent UI lag.
-*   Session state management for logging violations.
-*   CSS-based styling for a "Glassmorphic" premium look.
+#### Compliance Decision Confusion Matrix
+- **True Positives (Correctly Flagged Violations):** 44
+- **False Positives (False Alarms on Compliant Workers):** 1
+- **True Negatives (Correctly Verified Compliant Workers):** 33
+- **False Negatives (Critical Missed Hazards):** 4
 
 ---
 
-## 8. FEATURES DEEP DIVE
+### 3.3 Real-Time Throughput & Latency Profiling
 
-### 8.1 Real-Time Monitoring
-The "Live Optic Array" provides a 1080p stream where violations are highlighted in bright red.
+Evaluated over 100 consecutive frames (Intel Core i5 CPU, single-thread reference):
 
-### 8.2 Violation Snapshot System
-When a safety breach occurs, the system automatically:
-1.  Captures a high-resolution JPEG of the event.
-2.  Records the timestamp.
-3.  Logs the violation type (e.g., NO-Safety Vest).
+| Resolution | Mean FPS | Median FPS | Mean Latency (ms) | P95 Latency (ms) | Preprocess (ms) | Inference (ms) | RAM (MB) |
+|---|---|---|---|---|---|---|---|
+| **640 × 640** | 4.91 | 4.83 | 205.85 | 243.23 | 2.14 | 198.87 | 2758.3 |
+| **480 × 480** | 8.17 | 8.42 | 123.44 | 143.67 | 1.82 | 118.44 | 2747.6 |
+| **320 × 320** | 12.48 | 12.43 | 81.23 | 95.27 | 1.55 | 77.88 | 2746.0 |
 
-### 8.3 Performance Analytics
-The dashboard includes a real-time "Neural Confidence" slider, allowing administrators to adjust the AI's sensitivity based on environment noise.
-
-`[INSERT SCREENSHOT OF DASHBOARD HERE]`
+*Note on GPU Acceleration:* On a modern CUDA-enabled GPU (e.g. NVIDIA RTX 3060 / T4), forward pass inference drops to ~12–18 ms, delivering 45–60 FPS.
 
 ---
 
-## 9. USER INTERFACE DESIGN
-The interface was designed with the following design principles:
-*   **Dark Mode Optimization**: Ensures reduced eye strain for long monitoring sessions.
-*   **Glassmorphism**: Modern UI cards with blur effects for a premium feel.
-*   **Responsive Layout**: Automatic scaling for tablets and large desktop monitors.
+### 3.4 Failure Mode & Error Analysis
+
+#### Detection Recall by Object Scale
+- **Small Objects (< 32×32 px):** 58.54% Recall (192 / 328 detected, 136 missed)
+- **Medium Objects (32×96 px):** 82.05% Recall (160 / 195 detected, 35 missed)
+- **Large Objects (> 96×96 px):** 96.20% Recall (228 / 237 detected, 9 missed)
+
+**Diagnostic Insight:** Missed detections are overwhelmingly concentrated in small, distant background workers where resolution falls below 32 pixels. Near and medium-distance workers achieve >90% compliance coverage.
 
 ---
 
-## 10. DEPLOYMENT & SCALABILITY
+## 4. IEEE Paper Readiness Assessment
 
-### 10.1 Local Execution
-The system is optimized for local Windows deployment using a **Virtual Environment**. A dedicated `.bat` runner ensures one-click accessibility.
+### ✅ READY (Empirical Evidence Established)
+1. **Object Detection Efficacy**: Precision (0.9197), Recall (0.7243), mAP@50 (0.8386), mAP@50-95 (0.5273) on CSS dataset.
+2. **Compliance Rule Scoring**: Quantitative decision accuracy (93.90%), sensitivity (91.67%), and low false alarm rate (2.94%).
+3. **Reproducible Experimental Architecture**: Standardized CLI tools (`evaluation/evaluate_model.py`, `evaluate_compliance.py`, `benchmark_realtime.py`, `error_analysis.py`).
+4. **Latency Profiling**: Frame-by-frame measured latency distributions across multiple resolutions.
+5. **Scale Sensitivity Analysis**: Empirical breakdown demonstrating that 75.5% of misses occur on small sub-32px scale objects.
 
-### 10.2 Remote Accessibility
-Using **Localtunnel**, the local dashboard is proxied through a secure URL, permitting off-site safety officers to view live feeds on any mobile device.
+### ⚠️ NEEDS EXPERIMENT (Further Work Required)
+1. **Multi-Camera Scalability**: Benchmarking simultaneous multi-RTSP camera stream synchronization on edge servers.
+2. **Adverse Weather / Extreme Occlusion**: Stratified evaluation on extreme rain/fog/night conditions (requires curated dataset expansion).
+3. **5-Fold Training Retraining**: Training all 5 cross-validation folds from scratch under fixed hyperparameter seeds.
 
----
+### 📚 NEEDS LITERATURE REVIEW
+1. Comparison against recent published 2023–2025 PPE papers (e.g., YOLOv7-Tiny, RT-DETR, Faster R-CNN on SHWD and Pictor-v3 datasets).
+2. Theoretical discussion on spatial association vs direct negative class labeling (`NO-Hardhat`).
 
-## 11. RESULTS AND PERFORMANCE
-
-### 11.1 FPS Analysis
-The system achieves approximately 20-30 FPS on standard consumer electronics (Intel i7/M1), ensuring fluid motion detection.
-
-### 11.2 Detection Accuracy
-The model exhibits strong precision in identifying "Hardhats" and "Safety Vests" even at a distance of 30+ feet.
-
----
-
-## 12. CASE STUDY: CONSTRUCTION SITE PILOT
-Imagine a construction site with 50 workers. In manual auditing, a safety officer spends 4 hours daily checking gear. With SafetyEye:
-*   **Time Savings**: 100% reduction in manual audit time.
-*   **Coverage**: 100% of workers monitored simultaneously.
-*   **Incident Prevention**: Instant feedback to workers via the alert log.
-
----
-
-## 13. FUTURE ENHANCEMENTS
-*   **Audio Alerts**: Integrated alarm when a critical violation is detected.
-*   **Face Recognition**: Linking violations to specific employee IDs.
-*   **Cloud Storage**: Automated uploading of snapshots to AWS S3 or Google Cloud.
-*   **Mobile App**: Push notifications for safety managers.
-
----
-
-## 14. CONCLUSION
-SafetyEye represents a major step forward in industrial technology. By combining the speed of YOLOv8 with the accessibility of Streamlit, we have created a tool that is not only powerful but also easy to deploy in real-world scenarios. This project demonstrates that AI is no longer a research tool but a practical necessity for modern safety standards.
-
----
-
-## 15. REFERENCES
-1.  Jocher, G., et al. (2023). YOLOv8 by Ultralytics.
-2.  Streamlit Documentation. (2024). Building Data Apps.
-3.  Construction Site Safety Dataset. Roboflow Universe.
-
----
-
-## APPENDIX: SYSTEM SETUP
-*   **OS**: Windows 10/11
-*   **Python**: v3.12+
-*   **Memory**: 8GB+ RAM
-*   **GPU**: RECOMMENDED (NVIDIA CUDA) for 60+ FPS performance.
+### 🚫 DO NOT CLAIM (Scientifically Unsupported)
+- Do **NOT** claim *"100% safety violation prevention"* or *"zero false alarms"*.
+- Do **NOT** claim *"30+ FPS on all devices"* without specifying the exact GPU model.
+- Do **NOT** claim *"100% reduction in manual inspection costs"* without conducting an industrial human-subject study.

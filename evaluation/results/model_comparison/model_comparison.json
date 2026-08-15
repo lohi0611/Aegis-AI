@@ -1,0 +1,35 @@
+{
+  "experiment": "Model Architecture & Speed-Accuracy Comparison",
+  "timestamp": "2026-08-15 19:05:19",
+  "dataset": "D:\\safetyeye\\AI-Powered-Safety-At-Workplace-main\\infosys\\dataset\\css-data\\data.yaml",
+  "split": "test",
+  "device": "cpu",
+  "comparison_results": [
+    {
+      "model_name": "YOLOv8n-PPE (Custom Trained)",
+      "file_size_mb": 21.48,
+      "params_millions": 11.14,
+      "precision": 0.9105,
+      "recall": 0.7164,
+      "f1_score": 0.8019,
+      "mAP50": 0.7824,
+      "mAP50_95": 0.4618,
+      "inference_latency_ms": 265.84,
+      "e2e_latency_ms": 269.33,
+      "throughput_fps": 3.71
+    },
+    {
+      "model_name": "YOLOv8n (Pretrained Baseline)",
+      "file_size_mb": 6.23,
+      "params_millions": 3.16,
+      "precision": 0.012,
+      "recall": 0.0853,
+      "f1_score": 0.0211,
+      "mAP50": 0.0162,
+      "mAP50_95": 0.0115,
+      "inference_latency_ms": 124.52,
+      "e2e_latency_ms": 130.21,
+      "throughput_fps": 7.68
+    }
+  ]
+}

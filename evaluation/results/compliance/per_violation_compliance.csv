@@ -1,0 +1,4 @@
+violation_type,TP,FP,TN,FN,accuracy,precision,recall,f1_score,miss_rate_fnr
+NO-Mask,25,0,52,5,0.939,1.0,0.8333,0.9091,0.1667
+NO-Hardhat,21,0,57,4,0.9512,1.0,0.84,0.913,0.16
+NO-Safety Vest,32,2,44,4,0.9268,0.9412,0.8889,0.9143,0.1111

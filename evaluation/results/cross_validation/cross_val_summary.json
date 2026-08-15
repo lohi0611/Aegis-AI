@@ -1,0 +1,54 @@
+{
+  "experiment": "Cross-Validation & Split Statistical Evaluation",
+  "timestamp": "2026-08-15 19:04:37",
+  "num_evaluations": 2,
+  "statistical_aggregation": {
+    "precision": {
+      "mean": 0.9058,
+      "std": 0.0047,
+      "formatted": "0.9058 \u00b1 0.0047"
+    },
+    "recall": {
+      "mean": 0.7427,
+      "std": 0.0263,
+      "formatted": "0.7427 \u00b1 0.0263"
+    },
+    "f1_score": {
+      "mean": 0.8158,
+      "std": 0.014,
+      "formatted": "0.8158 \u00b1 0.0140"
+    },
+    "mAP50": {
+      "mean": 0.8093,
+      "std": 0.0269,
+      "formatted": "0.8093 \u00b1 0.0269"
+    },
+    "mAP50_95": {
+      "mean": 0.4878,
+      "std": 0.026,
+      "formatted": "0.4878 \u00b1 0.0260"
+    }
+  },
+  "individual_runs": [
+    {
+      "experiment_id": "Baseline_Val",
+      "split": "val",
+      "precision": 0.9011,
+      "recall": 0.769,
+      "f1_score": 0.8298,
+      "mAP50": 0.8362,
+      "mAP50_95": 0.5138,
+      "inference_speed_ms": 252.89
+    },
+    {
+      "experiment_id": "Baseline_Test",
+      "split": "test",
+      "precision": 0.9105,
+      "recall": 0.7164,
+      "f1_score": 0.8019,
+      "mAP50": 0.7824,
+      "mAP50_95": 0.4618,
+      "inference_speed_ms": 269.17
+    }
+  ]
+}

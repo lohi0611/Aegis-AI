@@ -1,0 +1,11 @@
+Class Name,Total GT,Detected,Missed (FN),False Alarms (FP),Recall (%)
+Hardhat,110,99,11,3,90.0
+Mask,28,21,7,2,75.0
+NO-Hardhat,41,26,15,7,63.41
+NO-Mask,79,61,18,17,77.22
+NO-Safety Vest,90,68,22,8,75.56
+Person,174,144,30,16,82.76
+Safety Cone,92,43,49,20,46.74
+Safety Vest,61,52,9,4,85.25
+machinery,44,37,7,8,84.09
+vehicle,41,29,12,7,70.73

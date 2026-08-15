@@ -1,0 +1,87 @@
+# ==============================================================================
+# AEGIS-AI Research & Evaluation Configuration
+# Project: Real-Time PPE Detection and Compliance Monitoring System for Construction Safety
+# ==============================================================================
+
+# Hardware and Runtime
+device: "cpu"                  # "cpu" or "0" (for CUDA GPU)
+num_workers: 2
+seed: 42
+
+# Model Specifications
+model:
+  name: "yolov8_ppe"
+  path: "models/yolov8_ppe.pt"
+  architecture: "YOLOv8n-PPE"
+  input_resolution: [640, 640]
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+
+# Dataset Configuration
+dataset:
+  name: "Construction Site Safety (CSS)"
+  source: "Roboflow Universe / Infosys CSS"
+  yaml_path: "infosys/dataset/css-data/data.yaml"
+  splits:
+    train: "infosys/dataset/css-data/train"
+    valid: "infosys/dataset/css-data/valid"
+    test: "infosys/dataset/css-data/test"
+  classes:
+    0: "Hardhat"
+    1: "Mask"
+    2: "NO-Hardhat"
+    3: "NO-Mask"
+    4: "NO-Safety Vest"
+    5: "Person"
+    6: "Safety Cone"
+    7: "Safety Vest"
+    8: "machinery"
+    9: "vehicle"
+  violation_classes:
+    - "NO-Hardhat"
+    - "NO-Mask"
+    - "NO-Safety Vest"
+  compliant_ppe_classes:
+    - "Hardhat"
+    - "Mask"
+    - "Safety Vest"
+
+# Evaluation Parameters
+detection_eval:
+  split: "test"                # "test" or "val"
+  batch_size: 16
+  save_json: true
+  save_plots: true
+  iou_thresholds: [0.50, 0.75, 0.95]
+
+# Real-Time Benchmark Parameters
+benchmark:
+  warmup_runs: 10
+  benchmark_frames: 100
+  resolutions:
+    - [640, 640]
+    - [480, 480]
+    - [320, 320]
+  measure_hardware: true
+  test_video_path: "uploaded_video.mp4"
+
+# Compliance Engine Rules
+compliance_rules:
+  require_hardhat: true
+  require_vest: true
+  require_mask: false          # Optional depending on site protocol
+  cooldown_seconds: 15.0
+  severity_mapping:
+    "NO-Hardhat": "CRITICAL"
+    "NO-Safety Vest": "CRITICAL"
+    "NO-Mask": "HIGH"
+
+# Output Directories
+output_dirs:
+  base: "evaluation/results"
+  detection: "evaluation/results/detection"
+  compliance: "evaluation/results/compliance"
+  performance: "evaluation/results/performance"
+  error_analysis: "evaluation/results/error_analysis"
+  cross_validation: "evaluation/results/cross_validation"
+  model_comparison: "evaluation/results/model_comparison"

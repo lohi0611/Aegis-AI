@@ -1,0 +1,168 @@
+{
+  "experiment": "PPE Detection Error Analysis and Diagnostics",
+  "timestamp": "2026-08-15 19:03:36",
+  "dataset_split": "D:\\safetyeye\\AI-Powered-Safety-At-Workplace-main\\infosys\\dataset\\css-data\\test",
+  "total_images": 82,
+  "overall_error_counts": {
+    "total_ground_truth_objects": 760,
+    "total_predicted_boxes": 672,
+    "matched_true_positives": 580,
+    "false_positives_false_alarms": 92,
+    "false_negatives_missed_ppe": 180,
+    "cross_class_confusions": 7
+  },
+  "scale_sensitivity_analysis": [
+    {
+      "Object Scale": "Small (<32x32)",
+      "Total Ground Truth": 328,
+      "Successfully Detected": 192,
+      "Missed Objects (FN)": 136,
+      "Detection Recall (%)": 58.54
+    },
+    {
+      "Object Scale": "Medium (32x96)",
+      "Total Ground Truth": 195,
+      "Successfully Detected": 160,
+      "Missed Objects (FN)": 35,
+      "Detection Recall (%)": 82.05
+    },
+    {
+      "Object Scale": "Large (>96x96)",
+      "Total Ground Truth": 237,
+      "Successfully Detected": 228,
+      "Missed Objects (FN)": 9,
+      "Detection Recall (%)": 96.2
+    }
+  ],
+  "confidence_distribution": {
+    "0.25 - 0.40 (Low)": 78,
+    "0.40 - 0.70 (Medium)": 175,
+    "0.70 - 1.00 (High)": 419
+  },
+  "per_class_error_breakdown": [
+    {
+      "Class Name": "Hardhat",
+      "Total GT": 110,
+      "Detected": 99,
+      "Missed (FN)": 11,
+      "False Alarms (FP)": 3,
+      "Recall (%)": 90.0
+    },
+    {
+      "Class Name": "Mask",
+      "Total GT": 28,
+      "Detected": 21,
+      "Missed (FN)": 7,
+      "False Alarms (FP)": 2,
+      "Recall (%)": 75.0
+    },
+    {
+      "Class Name": "NO-Hardhat",
+      "Total GT": 41,
+      "Detected": 26,
+      "Missed (FN)": 15,
+      "False Alarms (FP)": 7,
+      "Recall (%)": 63.41
+    },
+    {
+      "Class Name": "NO-Mask",
+      "Total GT": 79,
+      "Detected": 61,
+      "Missed (FN)": 18,
+      "False Alarms (FP)": 17,
+      "Recall (%)": 77.22
+    },
+    {
+      "Class Name": "NO-Safety Vest",
+      "Total GT": 90,
+      "Detected": 68,
+      "Missed (FN)": 22,
+      "False Alarms (FP)": 8,
+      "Recall (%)": 75.56
+    },
+    {
+      "Class Name": "Person",
+      "Total GT": 174,
+      "Detected": 144,
+      "Missed (FN)": 30,
+      "False Alarms (FP)": 16,
+      "Recall (%)": 82.76
+    },
+    {
+      "Class Name": "Safety Cone",
+      "Total GT": 92,
+      "Detected": 43,
+      "Missed (FN)": 49,
+      "False Alarms (FP)": 20,
+      "Recall (%)": 46.74
+    },
+    {
+      "Class Name": "Safety Vest",
+      "Total GT": 61,
+      "Detected": 52,
+      "Missed (FN)": 9,
+      "False Alarms (FP)": 4,
+      "Recall (%)": 85.25
+    },
+    {
+      "Class Name": "machinery",
+      "Total GT": 44,
+      "Detected": 37,
+      "Missed (FN)": 7,
+      "False Alarms (FP)": 8,
+      "Recall (%)": 84.09
+    },
+    {
+      "Class Name": "vehicle",
+      "Total GT": 41,
+      "Detected": 29,
+      "Missed (FN)": 12,
+      "False Alarms (FP)": 7,
+      "Recall (%)": 70.73
+    }
+  ],
+  "class_confusion_examples": [
+    {
+      "gt_class": "Safety Vest",
+      "pred_class": "NO-Safety Vest",
+      "conf": 0.43,
+      "image": "004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg"
+    },
+    {
+      "gt_class": "NO-Safety Vest",
+      "pred_class": "Person",
+      "conf": 0.294,
+      "image": "2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg"
+    },
+    {
+      "gt_class": "Hardhat",
+      "pred_class": "Safety Vest",
+      "conf": 0.434,
+      "image": "IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg"
+    },
+    {
+      "gt_class": "Hardhat",
+      "pred_class": "NO-Hardhat",
+      "conf": 0.563,
+      "image": "NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg"
+    },
+    {
+      "gt_class": "Safety Vest",
+      "pred_class": "Hardhat",
+      "conf": 0.341,
+      "image": "youtube-471_jpg.rf.4296b7bd9a5a07753077beddbcd651bf.jpg"
+    },
+    {
+      "gt_class": "vehicle",
+      "pred_class": "machinery",
+      "conf": 0.491,
+      "image": "youtube-53_jpg.rf.e96f8f81389f4e63a79663095680a617.jpg"
+    },
+    {
+      "gt_class": "Safety Vest",
+      "pred_class": "NO-Safety Vest",
+      "conf": 0.339,
+      "image": "youtube-596_jpg.rf.11a8a4ac01d8aadb80eeb0406dfa579a.jpg"
+    }
+  ]
+}

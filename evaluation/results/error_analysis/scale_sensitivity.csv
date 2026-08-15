@@ -1,0 +1,4 @@
+Object Scale,Total Ground Truth,Successfully Detected,Missed Objects (FN),Detection Recall (%)
+Small (<32x32),328,192,136,58.54
+Medium (32x96),195,160,35,82.05
+Large (>96x96),237,228,9,96.2
