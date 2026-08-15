@@ -299,7 +299,7 @@ with hdr_left:
     )
 with hdr_right:
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    render_theme_toggle()
+    render_theme_toggle(key="theme_toggle_header")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

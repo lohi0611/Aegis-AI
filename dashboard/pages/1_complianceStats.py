@@ -45,7 +45,7 @@ with st.sidebar:
 <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 8px;"></div>
 <div style="padding:0 16px;">
 """, unsafe_allow_html=True)
-    render_theme_toggle()
+    render_theme_toggle(key="theme_toggle_sidebar")
     navigation_tip()
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -55,7 +55,7 @@ with hdr_l:
     mission_control_header("Safety Analytics & Research Metrics", "Empirical validation benchmarks, compliance statistics, and session logs")
 with hdr_r:
     st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    render_theme_toggle()
+    render_theme_toggle(key="theme_toggle_header")
 
 # ── DB warning ────────────────────────────────────────────────────────────────
 if not DB_AVAILABLE:

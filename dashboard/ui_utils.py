@@ -644,14 +644,17 @@ def get_plotly_layout_defaults():
     }
 
 
-def render_theme_toggle():
-    """Render a compact sun/moon icon button. Returns True if clicked."""
+def render_theme_toggle(key: str = "theme_toggle_main"):
+    """Render a compact sun/moon icon button. Returns True if clicked.
+
+    Each call site must pass a unique ``key`` to avoid StreamlitDuplicateElementKey.
+    """
     theme   = get_theme()
     # Unicode sun/moon — minimal, clean
     icon    = "&#9788;" if theme == "dark" else "&#9790;"
     tooltip = "Switch to light mode" if theme == "dark" else "Switch to dark mode"
     st.markdown(f'<div class="theme-btn" title="{tooltip}">', unsafe_allow_html=True)
-    clicked = st.button(icon, key="__theme_toggle__")
+    clicked = st.button(icon, key=key)
     st.markdown("</div>", unsafe_allow_html=True)
     if clicked:
         st.session_state.aegis_theme = "light" if theme == "dark" else "dark"
