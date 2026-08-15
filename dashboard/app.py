@@ -178,6 +178,11 @@ _defaults = {
     "scan_start_time":      None,
     "tracker":              None,
     "aegis_theme":          "dark",
+    # Advanced settings (persist across reruns)
+    "adv_conf":             0.25,
+    "adv_thickness":        2,
+    "adv_alert_classes":    VIOLATION_CLASSES,
+    "adv_use_dshow":        True,
 }
 for k, v in _defaults.items():
     if k not in st.session_state:
@@ -199,48 +204,70 @@ with st.sidebar:
         </div>
         <div>
             <div style="font-size:0.95rem;font-weight:800;color:#E8EDF2;letter-spacing:2px;">AEGIS AI</div>
-            <div style="font-size:0.6rem;color:rgba(232,237,242,0.3);letter-spacing:0.5px;">Safety Intelligence Platform</div>
+            <div style="font-size:0.6rem;color:rgba(232,237,242,0.3);letter-spacing:0.5px;">PPE Safety Monitor</div>
         </div>
     </div>
 </div>
 <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 4px;"></div>
 """, unsafe_allow_html=True)
 
-    # ── Config ─────────────────────────────────────────────────────────────
     st.markdown("<div style='padding:0 16px;'>", unsafe_allow_html=True)
-    st.markdown("### Configuration")
 
+    # ── Step 1: Video source ────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:0.7rem;font-weight:700;color:rgba(249,168,37,0.8);'
+        'text-transform:uppercase;letter-spacing:1px;margin:14px 0 6px;">'
+        '① &nbsp;Choose video source</div>',
+        unsafe_allow_html=True,
+    )
     sources = ["Laptop Camera (Browser)"]
     if sample_video:
         sources.append("Sample Video")
     sources += ["Upload Video File", "Local Webcam (OpenCV)"]
-    video_source = st.selectbox("Video input source", sources)
-
-    confidence_slider = st.slider("Detection confidence", 0.1, 1.0, 0.25, step=0.01)
-    line_thickness    = st.slider("Bounding box thickness", 1, 5, 2)
-
-    alert_classes = st.multiselect(
-        "Violations to monitor",
-        options=VIOLATION_CLASSES,
-        default=VIOLATION_CLASSES,
-    )
+    video_source = st.selectbox("Video source", sources, label_visibility="collapsed")
 
     uploaded_file = None
     if video_source == "Upload Video File":
         uploaded_file = st.file_uploader("Upload video file", type=["mp4", "avi", "mov"])
 
-    use_dshow = st.checkbox("Enhanced hardware access (Windows)", value=True)
-
-    st.markdown("### Controls")
-
+    # ── Step 2: Start / Stop ────────────────────────────────────────────────
+    st.markdown(
+        '<div style="font-size:0.7rem;font-weight:700;color:rgba(249,168,37,0.8);'
+        'text-transform:uppercase;letter-spacing:1px;margin:18px 0 8px;">'
+        '② &nbsp;Start or stop scan</div>',
+        unsafe_allow_html=True,
+    )
     col_c1, col_c2 = st.columns(2)
     with col_c1:
-        start_btn = st.button("Start scan", key="start_scan_btn")
+        start_btn = st.button("▶  Start", key="start_scan_btn", use_container_width=True)
     with col_c2:
         st.markdown('<div class="stop-btn">', unsafe_allow_html=True)
-        stop_btn = st.button("Stop scan", key="stop_scan_btn")
+        stop_btn = st.button("■  Stop", key="stop_scan_btn", use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    # ── Advanced Settings (hidden by default) ───────────────────────────────
+    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    with st.expander("⚙  Advanced settings", expanded=False):
+        st.session_state.adv_conf = st.slider(
+            "Detection confidence", 0.1, 1.0, st.session_state.adv_conf, step=0.01,
+            help="How confident the AI must be before flagging a detection")
+        st.session_state.adv_thickness = st.slider(
+            "Box line thickness", 1, 5, st.session_state.adv_thickness)
+        st.session_state.adv_alert_classes = st.multiselect(
+            "Violations to detect",
+            options=VIOLATION_CLASSES,
+            default=st.session_state.adv_alert_classes,
+        )
+        st.session_state.adv_use_dshow = st.checkbox(
+            "Enhanced webcam access (Windows)", value=st.session_state.adv_use_dshow)
+
+    # Read advanced settings into local vars used by the rest of the page
+    confidence_slider = st.session_state.adv_conf
+    line_thickness    = st.session_state.adv_thickness
+    alert_classes     = st.session_state.adv_alert_classes or VIOLATION_CLASSES
+    use_dshow         = st.session_state.adv_use_dshow
+
+    # ── Start / Stop logic ──────────────────────────────────────────────────
     if start_btn:
         source_map = {
             "Laptop Camera (Browser)": "laptop_camera",
@@ -268,7 +295,6 @@ with st.sidebar:
     if stop_btn:
         st.session_state.running = False
         if st.session_state.db_session_id is not None:
-            elapsed = time.time() - (st.session_state.scan_start_time or time.time())
             close_scan_session(
                 st.session_state.db_session_id,
                 total_frames=st.session_state.total_frames_scanned,
@@ -277,15 +303,25 @@ with st.sidebar:
             )
 
     st.markdown("---")
-    navigation_tip()
 
     # DB status at bottom of sidebar
     if DB_AVAILABLE:
-        st.markdown('<div style="padding:4px 0;display:flex;align-items:center;gap:6px;"><span class="dot dot-green"></span><span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">Database connected</span></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="padding:4px 0;display:flex;align-items:center;gap:6px;">'
+            '<span class="dot dot-green"></span>'
+            '<span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">Database connected</span></div>',
+            unsafe_allow_html=True,
+        )
     else:
-        st.markdown('<div style="padding:4px 0;display:flex;align-items:center;gap:6px;"><span class="dot dot-amber"></span><span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">DB offline — CSV fallback</span></div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div style="padding:4px 0;display:flex;align-items:center;gap:6px;">'
+            '<span class="dot dot-amber"></span>'
+            '<span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">Logging to CSV</span></div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
