@@ -386,10 +386,21 @@ with c_logs:
 # ─────────────────────────────────────────────────────────────────────────────
 #  SHARED VIOLATION LOGGING HELPER
 # ─────────────────────────────────────────────────────────────────────────────
+import threading
+
+def _save_snapshot_bg(frame_bgr: np.ndarray, snap_abs: str):
+    """Write snapshot JPEG in a background thread so the camera loop is never blocked."""
+    try:
+        cv2.imwrite(snap_abs, frame_bgr)
+    except Exception:
+        pass
+
+
 def log_violation(tracker, w_id, d, frame_number, annotated_frame):
     """
     Check cooldown → log to session_state, CSV, and DB.
-    Returns the row dict if a new violation was logged, else None.
+    Snapshot is saved in a background thread to avoid blocking the camera feed.
+    Returns the row if a new violation was logged, else None.
     """
     cls_name = d["class_name"]
     now_ts   = time.time()
@@ -407,37 +418,43 @@ def log_violation(tracker, w_id, d, frame_number, annotated_frame):
     bbox    = [int(d["bbox"][0]), int(d["bbox"][1]),
                int(d["bbox"][2]), int(d["bbox"][3])]
 
-    # Snapshot
+    # ── Snapshot (non-blocking) ──────────────────────────────────────────────
     snap_id  = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-    snap_rel = os.path.join("snapshots", snap_id)
-    snap_abs = os.path.join(SNAP_DIR, snap_id)
+    snap_abs = os.path.join(SNAP_DIR, snap_id)   # absolute path used everywhere
     try:
-        cv2.imwrite(snap_abs, cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR))
+        frame_bgr = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
+        t = threading.Thread(target=_save_snapshot_bg, args=(frame_bgr, snap_abs), daemon=True)
+        t.start()
     except Exception:
-        snap_rel = ""
+        snap_abs = ""
 
     row = [ts_str, w_id, cls_name, d["confidence"],
-           bbox[0], bbox[1], bbox[2], bbox[3], snap_rel, "Violation"]
+           bbox[0], bbox[1], bbox[2], bbox[3], snap_abs, "Violation"]
     st.session_state.session_rows.append(row)
 
-    # CSV
+    # CSV (keep relative path for portability in CSV export)
+    snap_rel = os.path.relpath(snap_abs, start=os.path.dirname(LOG_CSV)) if snap_abs else ""
     try:
+        csv_row = [ts_str, w_id, cls_name, d["confidence"],
+                   bbox[0], bbox[1], bbox[2], bbox[3], snap_rel, "Violation"]
         with open(LOG_CSV, "a", newline="") as f:
-            csv.writer(f).writerow(row)
+            csv.writer(f).writerow(csv_row)
     except Exception:
         pass
 
-    # Database
-    log_violation_db(
-        session_id=st.session_state.db_session_id,
-        worker_id=w_id,
-        violation_type=cls_name,
-        timestamp=ts_raw,
-        frame_number=frame_number,
-        confidence=d["confidence"],
-        bbox=bbox,
-        snapshot_path=snap_rel,
-    )
+    # Database — only log if we have a valid session_id
+    db_sid = st.session_state.get("db_session_id")
+    if db_sid is not None:
+        log_violation_db(
+            session_id=db_sid,
+            worker_id=w_id,
+            violation_type=cls_name,
+            timestamp=ts_raw,
+            frame_number=frame_number,
+            confidence=d["confidence"],
+            bbox=bbox,
+            snapshot_path=snap_abs,   # store absolute so the UI can resolve it
+        )
 
     return row
 

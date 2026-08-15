@@ -130,6 +130,21 @@ if not v_list:
 df = pd.DataFrame(v_list)
 df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
+# ── Also merge any in-memory rows from the CURRENT session that may not have
+#    been committed to DB yet (happens if DB write lagged or failed) ──────────
+_mem_rows = st.session_state.get("session_rows", [])
+_current_db_sid = st.session_state.get("db_session_id")
+if _mem_rows and _current_db_sid == chosen["session_id"] and df.empty:
+    from db import DB_AVAILABLE as _dba  # noqa
+    _col_names = ["timestamp", "worker_id", "violation_type", "confidence",
+                  "x1", "y1", "x2", "y2", "snapshot_path", "status"]
+    df = pd.DataFrame(_mem_rows, columns=_col_names)
+    df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+    df["violation_id"] = range(1, len(df) + 1)
+    df["severity"] = df["violation_type"].apply(
+        lambda v: "CRITICAL" if ("Hardhat" in v or "Vest" in v) else "HIGH")
+    df["frame_number"] = 0
+
 st.markdown('<hr>', unsafe_allow_html=True)
 
 # ── Filters ───────────────────────────────────────────────────────────────────
@@ -189,7 +204,9 @@ with mc1:
 with mc2:
     section_label("Incident timeline", "clock")
     if not fdf.empty and "timestamp" in fdf:
-        tdf = fdf.set_index("timestamp").resample("1min")["violation_id"].count().reset_index()
+        tdf = fdf.set_index("timestamp").resample("1min")["violation_id"].count().reset_index() \
+              if "violation_id" in fdf.columns else \
+              fdf.set_index("timestamp").resample("1min").size().reset_index(name="violation_id")
         tdf.columns = ["time", "count"]
         fig = go.Figure(go.Scatter(
             x=tdf["time"], y=tdf["count"],
@@ -220,6 +237,41 @@ available = [c for c in cols_to_show if c in fdf.columns]
 st.dataframe(fdf[available].sort_values("timestamp", ascending=False),
              use_container_width=True)
 
+# ── Snapshot Gallery ──────────────────────────────────────────────────────────
+if "snapshot_path" in fdf.columns:
+    snap_rows = fdf[fdf["snapshot_path"].notna() & (fdf["snapshot_path"] != "")]
+    if not snap_rows.empty:
+        section_label("Violation snapshots", "camera")
+        st.markdown(
+            '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:10px;">'
+            'Annotated frames captured at the moment of each logged violation.</div>',
+            unsafe_allow_html=True,
+        )
+        snap_sample = snap_rows.sort_values("timestamp", ascending=False).head(12)
+        cols_per_row = 4
+        rows_iter = [snap_sample.iloc[i:i+cols_per_row]
+                     for i in range(0, len(snap_sample), cols_per_row)]
+        for row_chunk in rows_iter:
+            img_cols = st.columns(cols_per_row)
+            for col_idx, (_, snap_row) in enumerate(row_chunk.iterrows()):
+                snap_path = snap_row["snapshot_path"]
+                with img_cols[col_idx]:
+                    if snap_path and os.path.isfile(str(snap_path)):
+                        ts_label = str(snap_row["timestamp"])[:19] if snap_row["timestamp"] is not None else ""
+                        worker_label = snap_row.get("worker_id", "")
+                        v_type = snap_row.get("violation_type", "")
+                        st.image(str(snap_path),
+                                 caption=f"{worker_label} — {v_type}\n{ts_label}",
+                                 use_container_width=True)
+                    else:
+                        st.markdown(
+                            '<div style="height:100px;display:flex;align-items:center;'
+                            'justify-content:center;background:var(--bg-card-2);border-radius:6px;'
+                            'border:1px solid var(--border-subtle);color:var(--text-muted);'
+                            'font-size:0.7rem;">Image not available</div>',
+                            unsafe_allow_html=True,
+                        )
+
 # ── Download ──────────────────────────────────────────────────────────────────
 st.download_button(
     "Download filtered records (CSV)",
@@ -227,3 +279,4 @@ st.download_button(
     file_name=f"aegis_incidents_session{chosen['session_id']}.csv",
     mime="text/csv",
 )
+
