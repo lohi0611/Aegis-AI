@@ -84,7 +84,7 @@ def log_violation(
 ) -> Optional[int]:
     """Log an individual violation event."""
     if severity is None:
-        severity = "CRITICAL" if ("Hardhat" in violation_type or "Vest" in violation_type) else "HIGH"
+        severity = "CRITICAL" if ("Hardhat" in str(violation_type) or "Vest" in str(violation_type)) else "HIGH"
 
     bbox = bbox or [0, 0, 0, 0]
     ts = timestamp or datetime.utcnow()
@@ -92,27 +92,27 @@ def log_violation(
     db = get_db_session()
     try:
         event = ViolationEvent(
-            session_id=session_id,
-            worker_id=worker_id,
-            violation_type=violation_type,
-            confidence_score=confidence,
-            severity=severity,
+            session_id=int(session_id) if session_id is not None else None,
+            worker_id=str(worker_id) if worker_id is not None else "Unknown",
+            violation_type=str(violation_type),
+            confidence_score=float(confidence),
+            severity=str(severity),
             timestamp=ts,
-            frame_number=frame_number,
-            bbox_x1=bbox[0],
-            bbox_y1=bbox[1],
-            bbox_x2=bbox[2],
-            bbox_y2=bbox[3],
-            snapshot_path=snapshot_path,
+            frame_number=int(frame_number),
+            bbox_x1=int(bbox[0]) if len(bbox) > 0 else 0,
+            bbox_y1=int(bbox[1]) if len(bbox) > 1 else 0,
+            bbox_x2=int(bbox[2]) if len(bbox) > 2 else 0,
+            bbox_y2=int(bbox[3]) if len(bbox) > 3 else 0,
+            snapshot_path=str(snapshot_path) if snapshot_path else None,
             status="Violation",
         )
         db.add(event)
         
         # Increment session violation count if session active
-        if session_id:
-            s_obj = db.query(ScanSession).filter(ScanSession.session_id == session_id).first()
+        if session_id is not None:
+            s_obj = db.query(ScanSession).filter(ScanSession.session_id == int(session_id)).first()
             if s_obj:
-                s_obj.total_violations += 1
+                s_obj.total_violations = (s_obj.total_violations or 0) + 1
 
         db.commit()
         db.refresh(event)
@@ -149,7 +149,7 @@ def get_session_violations(session_id: int) -> List[Dict[str, Any]]:
     try:
         violations = (
             db.query(ViolationEvent)
-            .filter(ViolationEvent.session_id == session_id)
+            .filter(ViolationEvent.session_id == int(session_id))
             .order_by(ViolationEvent.timestamp.asc())
             .all()
         )
@@ -159,6 +159,7 @@ def get_session_violations(session_id: int) -> List[Dict[str, Any]]:
         return []
     finally:
         db.close()
+
 
 
 def get_analytics() -> Dict[str, Any]:

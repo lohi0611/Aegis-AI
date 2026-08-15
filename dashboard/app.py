@@ -390,6 +390,7 @@ col_left, col_right = st.columns([2.2, 1.0])
 with col_left:
     section_label("Live safety monitor", "camera")
     video_ph = st.empty()
+    cam_badge_ph = st.empty()
 
 with col_right:
     section_label("Site condition", "shield")
@@ -610,10 +611,14 @@ def draw_empty_perf():
 if video_source == "Laptop Camera (Browser)":
     if st.session_state.running:
         detector = PPEDetector(conf=confidence_slider)
-        val = auto_camera(key="auto_camera_key")
+        with cam_badge_ph:
+            val = auto_camera(key="auto_camera_key")
 
         if not val:
-            video_ph.info("Connecting to camera… Please allow browser camera access.")
+            if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
+                video_ph.image(st.session_state.last_annotated_frame, use_container_width=True)
+            else:
+                video_ph.info("📹 Connecting to laptop camera… Please allow camera access in your browser.")
         elif isinstance(val, str) and val.startswith("ERROR:"):
             st.error(f"Webcam Error: {val}")
             st.session_state.running = False
@@ -623,40 +628,43 @@ if video_source == "Laptop Camera (Browser)":
             nparr = np.frombuffer(base64.b64decode(encoded), np.uint8)
             frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-            st.session_state.total_frames_scanned += 1
-            annotated, detections = detector.detect(frame, line_width=line_thickness,
-                                                    alert_classes=alert_classes)
+            if frame is not None:
+                st.session_state.total_frames_scanned += 1
+                annotated, detections = detector.detect(frame, line_width=line_thickness,
+                                                        alert_classes=alert_classes)
+                st.session_state.last_annotated_frame = annotated
 
-            rects       = [d["bbox"] for d in detections]
-            class_names = [d["class_name"] for d in detections]
+                rects       = [d["bbox"] for d in detections]
+                class_names = [d["class_name"] for d in detections]
 
-            if not st.session_state.tracker:
-                st.session_state.tracker = CentroidTracker()
-            tracker      = st.session_state.tracker
-            assigned_ids = tracker.update(rects, class_names)
+                if not st.session_state.tracker:
+                    st.session_state.tracker = CentroidTracker()
+                tracker      = st.session_state.tracker
+                assigned_ids = tracker.update(rects, class_names)
 
-            for idx, d in enumerate(detections):
-                if d["class_name"] in alert_classes:
-                    w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
-                    log_violation(tracker, w_id, d,
-                                  st.session_state.total_frames_scanned, annotated)
+                for idx, d in enumerate(detections):
+                    if d["class_name"] in alert_classes:
+                        w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
+                        log_violation(tracker, w_id, d,
+                                      st.session_state.total_frames_scanned, annotated)
 
-            # FPS
-            now = time.time()
-            if "prev_time" not in st.session_state:
+                # FPS
+                now = time.time()
+                if "prev_time" not in st.session_state:
+                    st.session_state.prev_time = now
+                fps = 1.0 / max(1e-6, now - st.session_state.prev_time)
                 st.session_state.prev_time = now
-            fps = 1.0 / max(1e-6, now - st.session_state.prev_time)
-            st.session_state.prev_time = now
-            st.session_state.fps_history.append(fps)
-            st.session_state.time_history.append(datetime.now().strftime("%H:%M:%S"))
-            if len(st.session_state.fps_history) > 60:
-                st.session_state.fps_history.pop(0)
-                st.session_state.time_history.pop(0)
+                st.session_state.fps_history.append(fps)
+                st.session_state.time_history.append(datetime.now().strftime("%H:%M:%S"))
+                if len(st.session_state.fps_history) > 60:
+                    st.session_state.fps_history.pop(0)
+                    st.session_state.time_history.pop(0)
 
-            refresh_ui(annotated, fps, st.session_state.total_frames_scanned,
-                       st.session_state.fps_history, st.session_state.time_history)
+                refresh_ui(annotated, fps, st.session_state.total_frames_scanned,
+                           st.session_state.fps_history, st.session_state.time_history)
     else:
         pass   # handled in standby/post-scan block below
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

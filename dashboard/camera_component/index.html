@@ -4,10 +4,40 @@
     <meta charset="utf-8">
     <title>Auto Camera Component</title>
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .cam-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            color: #81C784;
+            background: rgba(76, 175, 80, 0.08);
+            border-radius: 4px;
+            border: 1px solid rgba(76, 175, 80, 0.2);
+        }
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #4CAF50;
+            box-shadow: 0 0 6px #4CAF50;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.85); }
+            100% { opacity: 1; transform: scale(1); }
+        }
     </style>
     <script>
-        // Send message to Streamlit parent
         function sendMessage(type, data) {
             window.parent.postMessage({
                 isStreamlitMessage: true,
@@ -16,14 +46,18 @@
             }, "*");
         }
 
-        // Notify Streamlit we are ready
         window.addEventListener("load", function() {
             sendMessage("streamlit:componentReady", { apiVersion: 1 });
-            sendMessage("streamlit:setFrameHeight", { height: 0 });
+            sendMessage("streamlit:setFrameHeight", { height: 28 });
         });
     </script>
 </head>
 <body>
+    <div class="cam-badge">
+        <span class="dot"></span>
+        <span id="cam-status">Camera stream active</span>
+    </div>
+
     <video id="video" width="640" height="480" autoplay playsinline muted style="display:none;"></video>
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
@@ -31,7 +65,7 @@
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        let stream = null;
+        const statusEl = document.getElementById('cam-status');
         let isReady = false;
         let inFlight = false;
         let lastSendTime = 0;
@@ -46,37 +80,36 @@
             audio: false
         })
         .then(function(s) {
-            stream = s;
             video.srcObject = s;
             video.setAttribute("playsinline", true);
             video.play().then(function() {
                 isReady = true;
+                if (statusEl) statusEl.textContent = "Live Camera Streaming";
                 captureAndSend();
             }).catch(function(e) {
-                console.log("Play catch:", e);
                 isReady = true;
                 captureAndSend();
             });
         })
         .catch(function(err) {
             console.error("Camera error:", err);
+            if (statusEl) statusEl.textContent = "Camera Error: " + err.message;
             sendMessage("streamlit:setComponentValue", { value: "ERROR: " + err.name + " - " + err.message });
         });
 
         function captureAndSend() {
             if (!isReady) return;
             const now = Date.now();
-            // Allow sending if not in flight, OR if previous frame has been in flight for over 250ms (watchdog)
-            if (inFlight && (now - lastSendTime < 250)) {
+            if (inFlight && (now - lastSendTime < 220)) {
                 return;
             }
             inFlight = true;
             lastSendTime = now;
             
             try {
-                if (video.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+                if (video.readyState >= 2) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.55);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.50);
                     sendMessage("streamlit:setComponentValue", { value: base64 });
                 } else {
                     inFlight = false;
@@ -87,19 +120,19 @@
             }
         }
 
-        // Watchdog interval: continuously pushes frames every 90ms so the camera NEVER stops
+        // Active interval loop: continuously pumps camera frames
         setInterval(function() {
             if (isReady) {
                 captureAndSend();
             }
-        }, 90);
+        }, 80);
 
-        // Listen for parent messages (Streamlit Renders)
+        // Listen for Streamlit render completion
         window.addEventListener("message", function(event) {
             if (event.data && event.data.type === "streamlit:render") {
                 inFlight = false;
                 if (isReady) {
-                    setTimeout(captureAndSend, 30);
+                    setTimeout(captureAndSend, 20);
                 }
             }
         });
