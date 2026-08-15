@@ -15,6 +15,92 @@ import plotly.graph_objects as go
 # Intelligence & UI Utils
 from ui_utils import apply_custom_css, mission_control_header, kpi_card, draw_incident_card, navigation_tip
 from detect import PPEDetector
+import streamlit.components.v1 as components
+
+# ===================== CENTROID TRACKER FOR DEDUPLICATION =====================
+class CentroidTracker:
+    def __init__(self, max_disappeared=15, min_distance=100):
+        self.next_id = 101
+        self.objects = {} # w_id -> centroid (cx, cy)
+        self.disappeared = {} # w_id -> frame_count
+        self.classes = {} # w_id -> class_name
+        self.logged_violations = {} # (w_id, class_name) -> timestamp
+        self.max_disappeared = max_disappeared
+        self.min_distance = min_distance
+
+    def register(self, centroid, class_name):
+        w_id = f"WKR_{self.next_id}"
+        self.objects[w_id] = centroid
+        self.disappeared[w_id] = 0
+        self.classes[w_id] = class_name
+        self.next_id += 1
+        return w_id
+
+    def deregister(self, w_id):
+        if w_id in self.objects:
+            del self.objects[w_id]
+        if w_id in self.disappeared:
+            del self.disappeared[w_id]
+        if w_id in self.classes:
+            del self.classes[w_id]
+
+    def update(self, rects, class_names):
+        if len(rects) == 0:
+            for w_id in list(self.disappeared.keys()):
+                self.disappeared[w_id] += 1
+                if self.disappeared[w_id] > self.max_disappeared:
+                    self.deregister(w_id)
+            return []
+
+        input_centroids = []
+        for (x1, y1, x2, y2) in rects:
+            cx = (x1 + x2) // 2
+            cy = (y1 + y2) // 2
+            input_centroids.append((cx, cy))
+
+        if len(self.objects) == 0:
+            assigned_ids = []
+            for i in range(len(input_centroids)):
+                w_id = self.register(input_centroids[i], class_names[i])
+                assigned_ids.append(w_id)
+            return assigned_ids
+
+        object_ids = list(self.objects.keys())
+        object_centroids = list(self.objects.values())
+
+        assigned_ids = [None] * len(input_centroids)
+        used_objs = set()
+
+        for i, (icx, icy) in enumerate(input_centroids):
+            best_dist = float('inf')
+            best_id = None
+            for j, w_id in enumerate(object_ids):
+                if w_id in used_objs:
+                    continue
+                if self.classes[w_id] != class_names[i]:
+                    continue
+                ocx, ocy = object_centroids[j]
+                dist = ((icx - ocx)**2 + (icy - ocy)**2)**0.5
+                if dist < best_dist and dist < self.min_distance:
+                    best_dist = dist
+                    best_id = w_id
+            
+            if best_id is not None:
+                self.objects[best_id] = (icx, icy)
+                self.disappeared[best_id] = 0
+                assigned_ids[i] = best_id
+                used_objs.add(best_id)
+            else:
+                w_id = self.register((icx, icy), class_names[i])
+                assigned_ids[i] = w_id
+
+        for w_id in object_ids:
+            if w_id not in used_objs:
+                self.disappeared[w_id] += 1
+                if self.disappeared[w_id] > self.max_disappeared:
+                    self.deregister(w_id)
+
+        return assigned_ids
 
 # ===================== PAGE CONFIG =====================
 st.set_page_config(
@@ -46,6 +132,10 @@ def resolve_log_csv():
 LOG_CSV = resolve_log_csv()
 SNAP_DIR = os.path.join(project_root, "snapshots")
 os.makedirs(SNAP_DIR, exist_ok=True)
+
+# Declare Custom Auto Camera Component
+component_dir = os.path.join(current_dir, "camera_component")
+auto_camera = components.declare_component("auto_camera", path=component_dir)
 
 # Find Sample Video
 sample_video_paths = [
@@ -112,7 +202,17 @@ with st.sidebar:
     
     if "running" not in st.session_state: 
         st.session_state.running = False
-    
+    if "session_rows" not in st.session_state:
+        st.session_state.session_rows = []
+    if "total_frames_scanned" not in st.session_state:
+        st.session_state.total_frames_scanned = 0
+    if "fps_history" not in st.session_state:
+        st.session_state.fps_history = []
+    if "time_history" not in st.session_state:
+        st.session_state.time_history = []
+    if "current_run_id" not in st.session_state:
+        st.session_state.current_run_id = 0
+
     col_c1, col_c2 = st.columns(2)
     with col_c1:
         start_btn = st.button("▶ START SCAN")
@@ -122,6 +222,11 @@ with st.sidebar:
     if start_btn:
         st.session_state.running = True
         st.session_state.session_rows = []
+        st.session_state.total_frames_scanned = 0
+        st.session_state.fps_history = []
+        st.session_state.time_history = []
+        st.session_state.current_run_id += 1
+        st.session_state.tracker = CentroidTracker()
     if stop_btn:
         st.session_state.running = False
 
@@ -136,18 +241,41 @@ mission_control_header(
 # ===================== KPI BANNER =====================
 col_k1, col_k2, col_k3, col_k4 = st.columns(4)
 
-# Placeholders for KPIs
-with col_k1: kpi_frames = st.empty()
-with col_k2: kpi_violations = st.empty()
-with col_k3: kpi_active = st.empty()
-with col_k4: kpi_fps = st.empty()
+# Helper to load stats dynamically
+def draw_current_kpis(scanned=None, breaches=None, status=None, latency=None):
+    if scanned is None:
+        scanned = st.session_state.get("total_frames_scanned", 0)
+    if breaches is None:
+        breaches = len(st.session_state.get("session_rows", []))
+    if status is None:
+        if breaches > 0:
+            status = f"{breaches} BREACHES"
+            alert_t = "danger"
+            color = "#ef4444"
+        else:
+            status = "SECURE"
+            alert_t = "success"
+            color = "#10b981"
+    else:
+        alert_t = "danger" if "BREACH" in status else "success" if status == "SECURE" else None
+        color = "#ef4444" if alert_t == "danger" else "#10b981" if alert_t == "success" else "#06b6d4"
+
+    if latency is None:
+        fps_hist = st.session_state.get("fps_history", [])
+        if fps_hist:
+            avg_fps = sum(fps_hist) / len(fps_hist)
+            latency = f"{avg_fps:.1f} FPS"
+        else:
+            latency = "STANDBY"
+    
+    with col_k1: kpi_card("Scanned Frames", str(scanned), "👁️", "#3b82f6")
+    with col_k2: kpi_card("Total Breaches", str(breaches), "🚨", "#ef4444")
+    with col_k3: kpi_card("Current Threat Level", status, "🛡️" if status == "SECURE" else "🔥", color, alert_type=alert_t)
+    with col_k4: kpi_card("Sensor Latency", latency, "⚡", "#06b6d4")
 
 # Helper to load initial default stats
 def draw_empty_kpis():
-    with col_k1: kpi_card("Scanned Frames", "0", "👁️", "#3b82f6")
-    with col_k2: kpi_card("Total Breaches", "0", "🚨", "#ef4444")
-    with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#10b981", alert_type="success")
-    with col_k4: kpi_card("Sensor Latency", "STANDBY", "⚡", "#06b6d4")
+    draw_current_kpis(scanned=0, breaches=0, status="SECURE", latency="STANDBY")
 
 st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
 
@@ -188,66 +316,135 @@ def draw_empty_metrics():
 
 # ===================== DETECTION ENGINE =====================
 if video_source == "Laptop Camera (Browser)":
-    detector = PPEDetector(conf=confidence_slider)
-    with video_ph.container():
-        st.markdown('<p style="color:#60a5fa; font-weight:600; margin-bottom:8px;">📷 Live Browser Camera Input</p>', unsafe_allow_html=True)
-        img_file = st.camera_input("Snapshot from Laptop Camera", key="laptop_camera_widget")
-    
-    if img_file:
-        bytes_data = img_file.getvalue()
-        frame = cv2.imdecode(np.frombuffer(bytes_data, np.uint8), cv2.IMREAD_COLOR)
-        annotated, detections = detector.detect(frame, line_width=line_thickness, alert_classes=alert_classes)
+    if st.session_state.running:
+        detector = PPEDetector(conf=confidence_slider)
         
-        # Display annotated result
-        video_ph.image(annotated, channels="BGR", use_container_width=True)
+        # Load the custom camera component
+        val = auto_camera(key="auto_camera_key")
         
-        # Update KPIs
-        frame_violations = len(detections)
-        with col_k1: kpi_card("Scanned Frames", "1", "👁️", "#3b82f6")
-        with col_k2: kpi_card("Total Breaches", str(frame_violations), "🚨", "#ef4444")
-        if frame_violations > 0:
-            with col_k3: kpi_card("Current Threat Level", f"{frame_violations} BREACHES", "🔥", "#ef4444", alert_type="danger")
-        else:
-            with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#10b981", alert_type="success")
-        with col_k4: kpi_card("Sensor Latency", "LIVE", "⚡", "#06b6d4")
-        
-        # Log breaches to session, incident stream, and CSV if any detected
-        if frame_violations > 0:
-            workers_list = ["WKR_101", "WKR_102", "WKR_103", "WKR_104"]
+        if not val:
+            video_ph.info("📷 Connecting to camera... Please allow camera access in your browser.")
+            
+        elif isinstance(val, str) and val.startswith("ERROR:"):
+            st.error(f"Webcam Error: {val}")
+            st.session_state.running = False
+            st.rerun()
+            
+        elif isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
+            # Decode base64 image
+            header, encoded = val.split(",", 1)
+            import base64
+            img_data = base64.b64decode(encoded)
+            nparr = np.frombuffer(img_data, np.uint8)
+            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            
+            st.session_state.total_frames_scanned += 1
+            
+            # Detect (drawing violations directly on frame)
+            annotated, detections = detector.detect(frame, line_width=line_thickness, alert_classes=alert_classes)
+            
+            # Centroid tracking & deduplication
+            rects = [d["bbox"] for d in detections]
+            class_names = [d["class_name"] for d in detections]
+            
+            if "tracker" not in st.session_state or st.session_state.tracker is None:
+                st.session_state.tracker = CentroidTracker()
+            tracker = st.session_state.tracker
+            
+            assigned_ids = tracker.update(rects, class_names)
+            
+            frame_violations = 0
+            rows_to_save = []
+            
+            for idx, d in enumerate(detections):
+                cls_name = d["class_name"]
+                if cls_name in alert_classes:
+                    frame_violations += 1
+                    w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
+                    
+                    # Cooldown deduplication per worker/violation class (15 sec interval)
+                    now_ts = time.time()
+                    log_key = (w_id, cls_name)
+                    if log_key not in tracker.logged_violations or (now_ts - tracker.logged_violations[log_key]) > 15.0:
+                        tracker.logged_violations[log_key] = now_ts
+                        
+                        ts_raw = datetime.now()
+                        ts_str = ts_raw.strftime("%Y-%m-%d %H:%M:%S")
+                        
+                        # Save Snap
+                        snap_id = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                        snap_path = os.path.join("snapshots", snap_id)
+                        abs_snap_path = os.path.join(SNAP_DIR, snap_id)
+                        cv2.imwrite(abs_snap_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
+                        
+                        row = [ts_str, w_id, cls_name, d["confidence"], 
+                               int(d["bbox"][0]), int(d["bbox"][1]), int(d["bbox"][2]), int(d["bbox"][3]), 
+                               snap_path, "Violation"]
+                        rows_to_save.append(row)
+                        st.session_state.session_rows.append(row)
+            
+            if rows_to_save:
+                with open(LOG_CSV, "a", newline="") as f:
+                    writer = csv.writer(f)
+                    writer.writerows(rows_to_save)
+            
+            # Performance timing
+            if "prev_time" not in st.session_state:
+                st.session_state.prev_time = time.time()
+            now = time.time()
+            fps = 1.0 / max(1e-6, (now - st.session_state.prev_time))
+            st.session_state.prev_time = now
+            
+            st.session_state.fps_history.append(fps)
+            if len(st.session_state.fps_history) > 60:
+                st.session_state.fps_history.pop(0)
+                
+            st.session_state.time_history.append(datetime.now().strftime("%H:%M:%S"))
+            if len(st.session_state.time_history) > 60:
+                st.session_state.time_history.pop(0)
+            
+            # Display annotated result
+            video_ph.image(annotated, channels="BGR", use_container_width=True)
+            
+            # Update KPIs
+            draw_current_kpis(latency=f"{fps:.1f} FPS")
+            
+            # Performance Chart Update
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=list(st.session_state.time_history), y=list(st.session_state.fps_history),
+                mode='lines', name='FPS', 
+                line=dict(color='#58a6ff', width=2),
+                fill='tozeroy', fillcolor='rgba(88, 166, 255, 0.08)'
+            ))
+            fig.update_layout(
+                height=180, margin=dict(l=10, r=10, t=10, b=10),
+                template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                xaxis=dict(showgrid=False, visible=False),
+                yaxis=dict(showgrid=False, title=dict(text="FPS", font=dict(color="#58a6ff")), tickfont=dict(color="#58a6ff"))
+            )
+            metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key=f"fps_chart_camera_{st.session_state.total_frames_scanned}")
+            
+            # Feed Update (Incident list)
             with feed_ph:
-                for det in detections:
-                    box = det["bbox"]
-                    cls_name = det["class_name"]
-                    conf_val = det["confidence"]
-                    w_id = random.choice(workers_list)
-                    timestamp_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
-                    # Save snapshot
-                    snap_filename = f"snap_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-                    snap_full_path = os.path.join(SNAP_DIR, snap_filename)
-                    cv2.imwrite(snap_full_path, annotated)
-                    
-                    snap_rel_path = f"snapshots/{snap_filename}"
-                    row = [timestamp_str, w_id, cls_name, round(conf_val, 2), box[0], box[1], box[2], box[3], snap_rel_path, "Violation"]
-                    
-                    if "session_rows" not in st.session_state:
-                        st.session_state.session_rows = []
-                    st.session_state.session_rows.append(row)
-                    
-                    # Draw Incident Card in Incident Stream feed
-                    draw_incident_card(
-                        timestamp=timestamp_str.split(" ")[1],
-                        breach_type=cls_name,
-                        worker_id=w_id,
-                        confidence=conf_val,
-                        snap_path=snap_rel_path,
-                        status="Violation"
-                    )
-                    
-                    # Append to CSV
-                    with open(LOG_CSV, "a", newline="") as f:
-                        writer = csv.writer(f)
-                        writer.writerow(row)
+                if st.session_state.session_rows:
+                    recent_logs = st.session_state.session_rows[-4:]
+                    for r_log in reversed(recent_logs):
+                        draw_incident_card(
+                            timestamp=r_log[0].split(" ")[1], 
+                            breach_type=r_log[2], 
+                            worker_id=r_log[1], 
+                            confidence=r_log[3], 
+                            snap_path=r_log[8],
+                            status=r_log[9]
+                        )
+                else:
+                    st.info("No safety breaches recorded in this session.")
+            
+            # Table Logs Update
+            if st.session_state.session_rows:
+                logs_df = pd.DataFrame(st.session_state.session_rows, columns=CSV_HEADER).tail(30)
+                logs_ph.dataframe(logs_df[["timestamp", "worker_id", "violation_type", "confidence", "status"]], use_container_width=True)
 
 elif st.session_state.running:
     detector = PPEDetector(conf=confidence_slider)
@@ -256,11 +453,16 @@ elif st.session_state.running:
     cap_src = None
     if video_source == "Sample Video" and sample_video:
         cap_src = sample_video
-    elif uploaded_file:
-        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]).name
-        with open(tmp_file, "wb") as f:
-            f.write(uploaded_file.read())
-        cap_src = tmp_file
+    elif video_source == "Upload Video File":
+        if uploaded_file:
+            tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(uploaded_file.name)[1]).name
+            with open(tmp_file, "wb") as f:
+                f.write(uploaded_file.read())
+            cap_src = tmp_file
+        else:
+            st.warning("⚠️ Please upload a video file to begin.")
+            st.session_state.running = False
+            st.stop()
     elif video_source == "Local Webcam (OpenCV)":
         cap_src = 0
     
@@ -292,55 +494,75 @@ elif st.session_state.running:
         st.session_state.running = False
         st.stop()
 
-    # Global session data
-    if "session_rows" not in st.session_state: 
-        st.session_state.session_rows = []
-    
+    local_run_id = st.session_state.current_run_id
     prev_time = time.time()
-    total_frames = 0
-    total_violations = 0
+    total_frames = st.session_state.total_frames_scanned
+    total_violations = len(st.session_state.session_rows)
+    
     fps_history = deque(maxlen=60)
     time_history = deque(maxlen=60)
     
-    workers_list = ["WKR_101", "WKR_102", "WKR_103", "WKR_104", "WKR_105", "WKR_106", "WKR_107", "WKR_108"]
+    for f in st.session_state.fps_history:
+        fps_history.append(f)
+    for t in st.session_state.time_history:
+        time_history.append(t)
 
     try:
         while cap.isOpened() and st.session_state.running:
+            # Thread leakage safety check
+            if local_run_id != st.session_state.current_run_id:
+                break
+
             ret, frame = cap.read()
             if not ret: 
                 break
 
             total_frames += 1
+            st.session_state.total_frames_scanned = total_frames
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             
             # Detect (passing our custom line width and alert classes)
             annotated, detections = detector.detect(rgb, line_width=line_thickness, alert_classes=alert_classes)
             
-            # Filter detections based on selected alert classes
+            # Centroid tracking & deduplication
+            rects = [d["bbox"] for d in detections]
+            class_names = [d["class_name"] for d in detections]
+            
+            if "tracker" not in st.session_state or st.session_state.tracker is None:
+                st.session_state.tracker = CentroidTracker()
+            tracker = st.session_state.tracker
+            
+            assigned_ids = tracker.update(rects, class_names)
+            
             frame_violations = 0
             rows_to_save = []
             
-            for d in detections:
+            for idx, d in enumerate(detections):
                 class_name = d["class_name"]
                 if class_name in alert_classes:
                     frame_violations += 1
-                    ts_raw = datetime.now()
-                    ts = ts_raw.strftime("%Y-%m-%d %H:%M:%S")
+                    w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
                     
-                    # Save Snap relative to project root snapshots directory
-                    snap_id = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
-                    snap_path = os.path.join("snapshots", snap_id)
-                    abs_snap_path = os.path.join(SNAP_DIR, snap_id)
-                    cv2.imwrite(abs_snap_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
-                    
-                    # Generate a random worker ID for visualization consistency
-                    worker_id = random.choice(workers_list)
-                    
-                    row = [ts, worker_id, class_name, d["confidence"], 
-                           int(d["bbox"][0]), int(d["bbox"][1]), int(d["bbox"][2]), int(d["bbox"][3]), 
-                           snap_path, "Violation"]
-                    rows_to_save.append(row)
-                    st.session_state.session_rows.append(row)
+                    # Cooldown deduplication per worker/violation class (15 sec interval)
+                    now_ts = time.time()
+                    log_key = (w_id, class_name)
+                    if log_key not in tracker.logged_violations or (now_ts - tracker.logged_violations[log_key]) > 15.0:
+                        tracker.logged_violations[log_key] = now_ts
+                        
+                        ts_raw = datetime.now()
+                        ts = ts_raw.strftime("%Y-%m-%d %H:%M:%S")
+                        
+                        # Save Snap relative to project root snapshots directory
+                        snap_id = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+                        snap_path = os.path.join("snapshots", snap_id)
+                        abs_snap_path = os.path.join(SNAP_DIR, snap_id)
+                        cv2.imwrite(abs_snap_path, cv2.cvtColor(annotated, cv2.COLOR_RGB2BGR))
+                        
+                        row = [ts, w_id, class_name, d["confidence"], 
+                               int(d["bbox"][0]), int(d["bbox"][1]), int(d["bbox"][2]), int(d["bbox"][3]), 
+                               snap_path, "Violation"]
+                        rows_to_save.append(row)
+                        st.session_state.session_rows.append(row)
 
             if rows_to_save:
                 with open(LOG_CSV, "a", newline="") as f:
@@ -354,17 +576,12 @@ elif st.session_state.running:
             prev_time = now
             fps_history.append(fps)
             time_history.append(datetime.now().strftime("%H:%M:%S"))
+            
+            st.session_state.fps_history = list(fps_history)
+            st.session_state.time_history = list(time_history)
 
             # Update KPI banner widgets dynamically
-            with col_k1: kpi_card("Scanned Frames", total_frames, "👁️", "#58a6ff")
-            with col_k2: kpi_card("Total Breaches", total_violations, "🚨", "#f85149")
-            
-            if frame_violations > 0:
-                with col_k3: kpi_card("Current Threat Level", f"{frame_violations} BREACHES", "🔥", "#f85149", alert_type="danger")
-            else:
-                with col_k3: kpi_card("Current Threat Level", "SECURE", "🛡️", "#56d364", alert_type="success")
-                
-            with col_k4: kpi_card("Sensor Latency", f"{fps:.1f} FPS", "⚡", "#00d4ff")
+            draw_current_kpis(scanned=total_frames, breaches=total_violations, latency=f"{fps:.1f} FPS")
 
             # Draw the video frame to Streamlit
             video_ph.image(annotated, use_container_width=True)
@@ -390,7 +607,6 @@ elif st.session_state.running:
                 # Feed Update (Incident list)
                 with feed_ph:
                     if st.session_state.session_rows:
-                        # Clear old list and draw recent 4
                         recent_logs = st.session_state.session_rows[-4:]
                         for r_log in reversed(recent_logs):
                             draw_incident_card(
@@ -414,30 +630,89 @@ elif st.session_state.running:
     finally:
         cap.release()
         st.session_state.running = False
-        st.success("✅ MISSION COMPLETED: Sensor stream successfully terminated.")
+        st.rerun()
 
 else:
-    # Standby Mode UI presentation
-    draw_empty_kpis()
-    
-    # Standby video placeholder: show a clean professional interface
-    video_ph.markdown("""
-    <div style="
-        background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
-        border: 1px dashed rgba(96,165,250,0.2);
-        border-radius: 16px;
-        padding: 80px 20px;
-        text-align: center;
-        box-shadow: inset 0 0 60px rgba(59,130,246,0.03);
-    ">
-        <div style="font-size:3.5rem; margin-bottom:18px; filter:drop-shadow(0 0 20px rgba(59,130,246,0.4));">📹</div>
-        <div style="font-size:1.1rem; font-weight:800; color:#ffffff; letter-spacing:0.5px; margin-bottom:10px;">CAMERA STREAM STANDBY</div>
-        <div style="width:40px; height:2px; background:linear-gradient(90deg,#3b82f6,#8b5cf6); margin:0 auto 14px;"></div>
-        <p style="color:rgba(255,255,255,0.35); font-size:0.82rem; max-width:380px; margin:0 auto; line-height:1.6;">
-            Select an input source from the sidebar and click <b style="color:#60a5fa;">▶ START SCAN</b> to begin real-time safety monitoring.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Standby / Stopped scan presentation
+    if st.session_state.get("session_rows"):
+        # Draw completion banner in video feed
+        video_ph.markdown(f"""
+        <div style="
+            background: linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(15,20,35,0.95) 100%);
+            border: 1px solid rgba(16,185,129,0.2);
+            border-radius: 16px;
+            padding: 60px 20px;
+            text-align: center;
+            box-shadow: inset 0 0 60px rgba(16,185,129,0.03);
+        ">
+            <div style="font-size:3.5rem; margin-bottom:18px; filter:drop-shadow(0 0 20px rgba(16,185,129,0.4));">🛡️</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#ffffff; letter-spacing:0.5px; margin-bottom:10px;">SCAN COMPLETED CLEANLY</div>
+            <div style="width:40px; height:2px; background:linear-gradient(90deg,#10b981,#34d399); margin:0 auto 14px;"></div>
+            <p style="color:rgba(255,255,255,0.45); font-size:0.82rem; max-width:380px; margin:0 auto; line-height:1.6;">
+                The scan session has finished. A total of <b style="color:#10b981;">{len(st.session_state.session_rows)} unique breaches</b> were logged across <b style="color:#3b82f6;">{st.session_state.total_frames_scanned} scanned frames</b>.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Draw the final KPIs
+        draw_current_kpis()
+        
+        # Draw the final Plotly performance chart from session state history
+        fig = go.Figure()
+        fps_hist = st.session_state.get("fps_history", [])
+        time_hist = st.session_state.get("time_history", [])
+        if fps_hist:
+            fig.add_trace(go.Scatter(
+                x=list(time_hist), y=list(fps_hist),
+                mode='lines', name='FPS', 
+                line=dict(color='#58a6ff', width=2),
+                fill='tozeroy', fillcolor='rgba(88, 166, 255, 0.08)'
+            ))
+        fig.update_layout(
+            height=180, margin=dict(l=10, r=10, t=10, b=10),
+            template="plotly_dark", plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=False, visible=False),
+            yaxis=dict(showgrid=False, title=dict(text="FPS", font=dict(color="#58a6ff")), tickfont=dict(color="#58a6ff"))
+        )
+        metrics_chart_ph.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False}, key="completed_metrics_chart")
+        
+        # Draw final incident list
+        with feed_ph:
+            recent_logs = st.session_state.session_rows[-4:]
+            for r_log in reversed(recent_logs):
+                draw_incident_card(
+                    timestamp=r_log[0].split(" ")[1], 
+                    breach_type=r_log[2], 
+                    worker_id=r_log[1], 
+                    confidence=r_log[3], 
+                    snap_path=r_log[8],
+                    status=r_log[9]
+                )
+                
+        # Draw the complete audit logs table
+        logs_df = pd.DataFrame(st.session_state.session_rows, columns=CSV_HEADER)
+        logs_ph.dataframe(logs_df[["timestamp", "worker_id", "violation_type", "confidence", "status"]], use_container_width=True)
 
-    # Draw empty metrics logs
-    draw_empty_metrics()
+    else:
+        # Initial Standby Mode
+        draw_empty_kpis()
+        
+        video_ph.markdown("""
+        <div style="
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px dashed rgba(96,165,250,0.2);
+            border-radius: 16px;
+            padding: 80px 20px;
+            text-align: center;
+            box-shadow: inset 0 0 60px rgba(59,130,246,0.03);
+        ">
+            <div style="font-size:3.5rem; margin-bottom:18px; filter:drop-shadow(0 0 20px rgba(59,130,246,0.4));">📹</div>
+            <div style="font-size:1.1rem; font-weight:800; color:#ffffff; letter-spacing:0.5px; margin-bottom:10px;">CAMERA STREAM STANDBY</div>
+            <div style="width:40px; height:2px; background:linear-gradient(90deg,#3b82f6,#8b5cf6); margin:0 auto 14px;"></div>
+            <p style="color:rgba(255,255,255,0.35); font-size:0.82rem; max-width:380px; margin:0 auto; line-height:1.6;">
+                Select an input source from the sidebar and click <b style="color:#60a5fa;">▶ START SCAN</b> to begin real-time safety monitoring.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        draw_empty_metrics()

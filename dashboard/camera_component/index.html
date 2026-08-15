@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Auto Camera Component</title>
+    <style>
+        body { margin: 0; padding: 0; overflow: hidden; background: transparent; }
+    </style>
+    <script>
+        // Send message to Streamlit parent
+        function sendMessage(type, data) {
+            window.parent.postMessage({
+                isStreamlitMessage: true,
+                type: type,
+                ...data
+            }, "*");
+        }
+
+        // Notify Streamlit we are ready
+        window.addEventListener("load", function() {
+            sendMessage("streamlit:componentReady", { apiVersion: 1 });
+            sendMessage("streamlit:setFrameHeight", { height: 0 });
+        });
+    </script>
+</head>
+<body>
+    <video id="video" width="640" height="480" autoplay playsinline style="display:none;"></video>
+    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let stream = null;
+        let isReady = false;
+        let isProcessing = false;
+
+        // Initialize camera
+        navigator.mediaDevices.getUserMedia({
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: "user"
+            },
+            audio: false
+        })
+        .then(function(s) {
+            stream = s;
+            video.srcObject = s;
+            video.onloadedmetadata = function() {
+                isReady = true;
+                // Capture first frame
+                captureAndSend();
+            };
+        })
+        .catch(function(err) {
+            console.error("Camera error:", err);
+            sendMessage("streamlit:setComponentValue", { value: "ERROR: " + err.name + " - " + err.message });
+        });
+
+        function captureAndSend() {
+            if (!isReady || isProcessing) return;
+            isProcessing = true;
+            
+            try {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.6); // Compress to save bandwidth
+                    sendMessage("streamlit:setComponentValue", { value: base64 });
+                } else {
+                    isProcessing = false;
+                    setTimeout(captureAndSend, 100);
+                }
+            } catch (e) {
+                console.error("Capture error:", e);
+                isProcessing = false;
+            }
+        }
+
+        // Listen for parent messages (Streamlit Renders)
+        window.addEventListener("message", function(event) {
+            if (event.data.type === "streamlit:render") {
+                // Parent finished rendering, ready for next frame!
+                isProcessing = false;
+                // Wait 150ms to prevent CPU throttling and allow clean rendering
+                setTimeout(captureAndSend, 150);
+            }
+        });
+    </script>
+</body>
+</html>
