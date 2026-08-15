@@ -1,374 +1,226 @@
+"""
+AEGIS Safety Intelligence — Compliance & Analytics
+Reads from the persistent SQLite/PostgreSQL database.
+Falls back to CSV if DB is unavailable.
+"""
 import os
+import csv
+from datetime import datetime, date, timedelta
+
 import streamlit as st
 import pandas as pd
-import numpy as np
-import plotly.express as px
 import plotly.graph_objects as go
-from datetime import datetime, timedelta
+import plotly.express as px
 
-# Import UI Utils
-from ui_utils import apply_custom_css, mission_control_header, kpi_card
+from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip
+from db import DB_AVAILABLE, get_analytics, get_recent_sessions, get_session_violations
 
-# ===================== PAGE CONFIG =====================
 st.set_page_config(
-    page_title="AegisAI | Compliance Analytics",
+    page_title="AEGIS | Analytics",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_bar="expanded",
 )
-
-# Apply Styling
 apply_custom_css()
 
-# ===================== ABSOLUTE PATH RESOLUTION =====================
-current_dir = os.path.dirname(os.path.abspath(__file__))
-dashboard_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(dashboard_dir)
+# ── Colors ───────────────────────────────────────────────────────────────────
+ORANGE = "#f97316"; RED = "#ef4444"; GREEN = "#22c55e"; TEAL = "#06b6d4"; AMBER = "#fbbf24"
 
-def resolve_log_csv():
-    candidates = [
-        os.path.join(project_root, "violations.csv"),
-        os.path.join(dashboard_dir, "violations.csv"),
-        os.path.join(current_dir, "violations.csv"),
-        "violations.csv"
-    ]
-    for c in candidates:
-        if os.path.exists(c):
-            return c
-    return os.path.join(project_root, "violations.csv")
-
-LOG_CSV = resolve_log_csv()
-
-# Load CSV safely
-def load_data():
-    if not os.path.exists(LOG_CSV):
-        return pd.DataFrame()
-    try:
-        df = pd.read_csv(LOG_CSV)
-        if df.empty:
-            return df
-        # Convert timestamp to datetime
-        df["timestamp"] = pd.to_datetime(df["timestamp"])
-        # Ensure status column exists, default to 'Violation' if missing
-        if "status" not in df.columns:
-            df["status"] = "Violation"
-        else:
-            df["status"] = df["status"].fillna("Violation")
-        return df
-    except Exception as e:
-        st.error(f"Error loading logs: {e}")
-        return pd.DataFrame()
-
-df_raw = load_data()
-
-# ===================== SIDEBAR FILTERS =====================
+# ── Header ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-    <div style="text-align:center; padding: 20px 0 10px;">
-        <div style="font-size:2.4rem; margin-bottom:8px; filter: drop-shadow(0 0 16px rgba(59,130,246,0.5));">📊</div>
-        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; letter-spacing:1.5px;">AEGIS ANALYTICS</div>
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:2px; margin-top:3px;">Safety Audit Sub-Node</div>
+    <div style="text-align:center;padding:16px 0 10px;">
+        <div style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(249,115,22,0.4));">⛑️</div>
+        <div style="font-size:0.95rem;font-weight:800;color:#fff;letter-spacing:2px;">AEGIS AI</div>
+        <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
+            letter-spacing:2px;margin-top:2px;">Safety Intelligence</div>
     </div>
-    <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(96,165,250,0.2), transparent); margin: 10px 0 16px;"></div>
+    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
+        margin:4px 0 14px;"></div>
     """, unsafe_allow_html=True)
-    st.markdown("### 📅 DATE FILTER")
-    
-    if not df_raw.empty:
-        min_date = df_raw["timestamp"].min().date()
-        max_date = df_raw["timestamp"].max().date()
-        
-        # Date range picker
-        date_range = st.date_input(
-            "Select Audit Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
-    else:
-        st.info("No logs available to filter dates.")
-        date_range = None
-        
-    st.markdown("### 🎛️ FILTERS")
-    
-    # Violation Type Filter
-    all_types = ["NO-Hardhat", "NO-Mask", "NO-Safety Vest"]
-    selected_types = st.multiselect(
-        "Violation Category",
-        options=all_types,
-        default=all_types
-    )
-    
-    st.markdown("---")
-    st.info("💡 **Navigation:** Use the sidebar menu to return to **Operations Command** or go to the **Incident Explorer**.")
+    navigation_tip()
 
-# ===================== TITLE HEADER =====================
 mission_control_header(
-    "AEGIS <span style='background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'>STRATEGIC</span> ANALYTICS",
-    "OPERATIONAL VIOLATION HEATMAPS & SAFETY PERFORMANCE INTELLIGENCE"
+    "📊 SAFETY ANALYTICS",
+    "Historical compliance metrics & violation patterns",
 )
 
-# Check if data is empty
-if df_raw.empty:
-    st.info("💤 **Awaiting Data Initialization.** Start active scans in the Command Center to populate compliance charts.")
-    st.stop()
+# ── Load data ─────────────────────────────────────────────────────────────────
+analytics = get_analytics() if DB_AVAILABLE else {}
+sessions  = get_recent_sessions(30) if DB_AVAILABLE else []
 
-# ===================== FILTER DATA =====================
-df = df_raw.copy()
+# CSV fallback for violations history
+current_dir  = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+csv_path = next(
+    (p for p in [
+        os.path.join(project_root, "violations.csv"),
+        os.path.join(current_dir,  "violations.csv"),
+    ] if os.path.exists(p)),
+    None,
+)
 
-# Date range filtering
-if date_range and len(date_range) == 2:
-    start_dt = pd.to_datetime(date_range[0])
-    end_dt = pd.to_datetime(date_range[1]) + timedelta(days=1)
-    df = df[(df["timestamp"] >= start_dt) & (df["timestamp"] < end_dt)]
+def load_csv_df():
+    if csv_path and os.path.exists(csv_path):
+        try:
+            df = pd.read_csv(csv_path)
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            return df.dropna(subset=["timestamp"])
+        except Exception:
+            pass
+    return pd.DataFrame()
 
-# Violation type filtering
-if selected_types:
-    df = df[df["violation_type"].isin(selected_types)]
+csv_df = load_csv_df()
 
-# Calculate statistics
-total_logs = len(df)
-active_violations = len(df[df["status"] == "Violation"])
-resolved_incidents = len(df[df["status"] == "Resolved"])
-dismissed_incidents = len(df[df["status"] == "Dismissed"])
 
-# Smart compliance score: starts at 96% baseline, drops with active violations, rises with resolved/dismissed ones.
-if total_logs == 0:
-    compliance_score = 100.0
-else:
-    compliance_score = max(0.0, 97.5 - (active_violations * 0.12))
-    compliance_score = min(100.0, compliance_score + (resolved_incidents * 0.12) + (dismissed_incidents * 0.08))
+# ── DB unavailable warning ─────────────────────────────────────────────────────
+if not DB_AVAILABLE:
+    st.markdown("""
+    <div class="warning-stripe">
+        ⚠️ <b>Database offline</b> — analytics are sourced from the CSV fallback.
+        Install <code>sqlalchemy</code> and restart for full persistent analytics.
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown("")
 
-# High risk hour calculation
-if not df.empty:
-    df['hour'] = df['timestamp'].dt.hour
-    risk_hour_counts = df['hour'].value_counts()
-    if not risk_hour_counts.empty:
-        high_risk_hour = f"{risk_hour_counts.index[0]:02d}:00"
-    else:
-        high_risk_hour = "N/A"
-else:
-    high_risk_hour = "N/A"
 
-# ===================== KPI ROW =====================
-col_k1, col_k2, col_k3, col_k4 = st.columns(4)
+# ── KPI Banner ────────────────────────────────────────────────────────────────
+c1, c2, c3, c4, c5, c6 = st.columns(6)
 
-with col_k1:
-    kpi_card("Overall Compliance", f"{compliance_score:.1f}%", "🛡️", "#56d364" if compliance_score > 90 else "#e3b341", alert_type="success" if compliance_score > 90 else None)
-with col_k2:
-    kpi_card("Unresolved Breaches", active_violations, "🚨", "#f85149", alert_type="danger" if active_violations > 5 else None)
-with col_k3:
-    kpi_card("Resolved Incidents", resolved_incidents, "✅", "#56d364")
-with col_k4:
-    kpi_card("Peak Breach Hour", high_risk_hour, "⏰", "#00d4ff")
+total_scans      = analytics.get("total_scans", 0)      if DB_AVAILABLE else (len(sessions) or (len(csv_df) if not csv_df.empty else 0))
+total_violations = analytics.get("total_violations", 0) if DB_AVAILABLE else (len(csv_df) if not csv_df.empty else 0)
+violations_today = analytics.get("violations_today", 0) if DB_AVAILABLE else (
+    len(csv_df[csv_df["timestamp"].dt.date == date.today()]) if not csv_df.empty else 0
+)
+critical_v       = analytics.get("critical_violations", 0) if DB_AVAILABLE else 0
+most_common      = analytics.get("most_common", "N/A")     if DB_AVAILABLE else (
+    csv_df["violation_type"].value_counts().idxmax() if not csv_df.empty and "violation_type" in csv_df else "N/A"
+)
+safety_score     = analytics.get("safety_score", 100.0)   if DB_AVAILABLE else 100.0
 
-st.markdown('<div style="height: 15px;"></div>', unsafe_allow_html=True)
+with c1: kpi_card("Total Scans",       str(total_scans),       "📹", TEAL)
+with c2: kpi_card("Total Violations",  str(total_violations),  "🚨", RED if total_violations > 0 else GREEN)
+with c3: kpi_card("Today's Violations",str(violations_today),  "📅", AMBER if violations_today > 0 else GREEN)
+with c4: kpi_card("Critical Events",   str(critical_v),        "🔥", RED if critical_v > 0 else GREEN)
+with c5: kpi_card("Most Common",       most_common[:15] if most_common != "N/A" else "N/A", "📌", ORANGE)
+with c6: kpi_card("Safety Score",      f"{safety_score}%",     "🛡️",
+                   GREEN if safety_score >= 80 else AMBER if safety_score >= 50 else RED)
 
-# ===================== CHART LAYER 1 =====================
-col_c1, col_c2 = st.columns([1.2, 1.8])
-
-with col_c1:
-    st.markdown('<div class="section-title">📊 Compliance Score</div>', unsafe_allow_html=True)
-    
-    # Custom Dial Gauge Chart using Plotly
-    fig_gauge = go.Figure(go.Indicator(
-        mode = "gauge+number",
-        value = compliance_score,
-        domain = {'x': [0, 1], 'y': [0, 1]},
-        number = {'suffix': "%", 'font': {'size': 40, 'color': '#ffffff', 'family': 'Outfit'}},
-        gauge = {
-            'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': "#888888"},
-            'bar': {'color': "#58a6ff"},
-            'bgcolor': "rgba(13, 19, 31, 0.6)",
-            'borderwidth': 1,
-            'bordercolor': "rgba(255,255,255,0.08)",
-            'steps': [
-                {'range': [0, 60], 'color': 'rgba(248, 81, 73, 0.15)'},
-                {'range': [60, 85], 'color': 'rgba(210, 153, 34, 0.15)'},
-                {'range': [85, 100], 'color': 'rgba(46, 160, 67, 0.15)'}
-            ],
-            'threshold': {
-                'line': {'color': "#00d4ff", 'width': 3},
-                'thickness': 0.75,
-                'value': 90.0
-            }
-        }
-    ))
-    
-    fig_gauge.update_layout(
-        height=240,
-        margin=dict(l=20, r=20, t=20, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(family="Inter", color="#e2e8f0")
-    )
-    st.plotly_chart(fig_gauge, use_container_width=True, config={'displayModeBar': False}, key="gauge_chart")
-
-with col_c2:
-    st.markdown('<div class="section-title">⚠️ Category Breakdown</div>', unsafe_allow_html=True)
-    if not df.empty:
-        type_counts = df["violation_type"].value_counts().reset_index()
-        type_counts.columns = ["Violation Type", "Count"]
-        
-        # Donut chart
-        fig_donut = px.pie(
-            type_counts, 
-            names="Violation Type", 
-            values="Count", 
-            hole=0.45,
-            color="Violation Type",
-            color_discrete_map={
-                "NO-Hardhat": "#f85149",
-                "NO-Mask": "#e3b341",
-                "NO-Safety Vest": "#58a6ff"
-            }
-        )
-        
-        fig_donut.update_traces(
-            textposition='inside', 
-            textinfo='percent+label',
-            marker=dict(line=dict(color='rgba(6,9,15,1)', width=2))
-        )
-        
-        fig_donut.update_layout(
-            height=240,
-            margin=dict(l=0, r=0, t=10, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            showlegend=True,
-            legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5, font=dict(color="rgba(255,255,255,0.5)", size=11)),
-            template="plotly_dark",
-            font=dict(family="Inter")
-        )
-        st.plotly_chart(fig_donut, use_container_width=True, config={'displayModeBar': False}, key="donut_chart")
-    else:
-        st.info("No data available for breakdown.")
-
-# ===================== CHART LAYER 2 =====================
-st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
-col_h1, col_h2 = st.columns([1.8, 1.2])
-
-with col_h1:
-    st.markdown('<div class="section-title">🔥 Breach Intensity Heatmap</div>', unsafe_allow_html=True)
-    if not df.empty:
-        df['hour'] = df['timestamp'].dt.hour
-        df['day_name'] = df['timestamp'].dt.day_name()
-        
-        # Group and pivot
-        heatmap_df = df.groupby(['day_name', 'hour']).size().reset_index(name='count')
-        
-        # Create standard layout
-        days_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        hours_order = list(range(24))
-        
-        # Build grid
-        grid = pd.DataFrame(0, index=days_order, columns=hours_order)
-        for _, row in heatmap_df.iterrows():
-            if row['day_name'] in days_order:
-                grid.at[row['day_name'], row['hour']] = row['count']
-                
-        # Heatmap figure
-        fig_heat = px.imshow(
-            grid,
-            labels=dict(x="Hour of Day", y="Day of Week", color="Breaches Count"),
-            x=[f"{h:02d}:00" for h in hours_order],
-            y=days_order,
-            color_continuous_scale="Reds",
-        )
-        
-        fig_heat.update_layout(
-            height=260,
-            margin=dict(l=20, r=20, t=10, b=10),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            template="plotly_dark",
-            coloraxis_showscale=False
-        )
-        st.plotly_chart(fig_heat, use_container_width=True, config={'displayModeBar': False}, key="heat_chart")
-    else:
-        st.info("No data available for heatmap.")
-
-with col_h2:
-    st.markdown('<div class="section-title">👷 Worker Violations</div>', unsafe_allow_html=True)
-    if not df.empty and "worker_id" in df.columns:
-        # Tally active violations per worker
-        worker_violations = df[df["status"] == "Violation"]["worker_id"].value_counts().reset_index()
-        worker_violations.columns = ["Worker ID", "Active Breaches"]
-        
-        # Show top 5 workers in a clean bar chart
-        top_workers = worker_violations.head(5)
-        if not top_workers.empty:
-            fig_bar = px.bar(
-                top_workers,
-                x="Active Breaches",
-                y="Worker ID",
-                orientation='h',
-                color="Active Breaches",
-                color_continuous_scale="Reds"
-            )
-            
-            fig_bar.update_layout(
-                height=260,
-                margin=dict(l=20, r=20, t=10, b=10),
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                template="plotly_dark",
-                coloraxis_showscale=False,
-                yaxis={'categoryorder': 'total ascending'}
-            )
-            st.plotly_chart(fig_bar, use_container_width=True, config={'displayModeBar': False}, key="bar_chart")
-        else:
-            st.success("No active violations logged for any workers!")
-    else:
-        st.info("No worker-specific logs found.")
-
-# ===================== SUMMARY & DOWNLOADS =====================
 st.markdown("---")
-col_s1, col_s2 = st.columns([2.2, 1])
 
-with col_s1:
-    st.markdown('<div class="section-title">🧠 Safety Command Advisor</div>', unsafe_allow_html=True)
-    
-    # Dynamically generate reports
-    if compliance_score > 93:
-        st.markdown("""
-        <div style="padding: 16px; border-radius: 12px; background: rgba(46, 160, 67, 0.06); border: 1px solid rgba(46, 160, 67, 0.25); box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            <h4 style="color:#56d364; margin-top:0; font-weight:700;">🟢 SECTOR SECURITY RATINGS: SECURE</h4>
-            <p style="margin-bottom:0; font-size:0.9rem; color:rgba(255,255,255,0.75); line-height:1.45;">
-                Operations are running at high safety rates. Target compliance margins have been successfully achieved. No emergency intervention is required at this node. Continue standard surveillance operations.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    elif compliance_score > 80:
-        st.markdown("""
-        <div style="padding: 16px; border-radius: 12px; background: rgba(210, 153, 34, 0.06); border: 1px solid rgba(210, 153, 34, 0.25); box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            <h4 style="color:#e3b341; margin-top:0; font-weight:700;">🟡 SECTOR SECURITY RATINGS: CAUTION</h4>
-            <p style="margin-bottom:0; font-size:0.9rem; color:rgba(255,255,255,0.75); line-height:1.45;">
-                Compliance rates are currently within acceptable limits but show a slight downward trend. Peak breaches occur at <b>{high_risk_hour}</b>. We advise dispatching safety monitors during this hour to check PPE compliance.
-            </p>
-        </div>
-        """.format(high_risk_hour=high_risk_hour), unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div style="padding: 16px; border-radius: 12px; background: rgba(248, 81, 73, 0.06); border: 1px solid rgba(248, 81, 73, 0.25); box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            <h4 style="color:#f85149; margin-top:0; font-weight:700;">🔴 SECTOR SECURITY RATINGS: RISK STATE</h4>
-            <p style="margin-bottom:0; font-size:0.9rem; color:rgba(255,255,255,0.75); line-height:1.45;">
-                <b>Critical safety levels breached!</b> Compliance Index has dropped to <b>{score:.1f}%</b>. High concentration of breaches logged. A review of site operations and safety vest audits is immediately recommended.
-            </p>
-        </div>
-        """.format(score=compliance_score), unsafe_allow_html=True)
 
-with col_s2:
-    st.markdown('<div class="section-title">💾 Export</div>', unsafe_allow_html=True)
-    if not df.empty:
-        # Convert filtered df back to CSV representation
-        csv_data = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 DOWNLOAD REPORT (CSV)",
-            data=csv_data,
-            file_name=f"aegis_safety_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
+# ── Charts ─────────────────────────────────────────────────────────────────────
+ch1, ch2 = st.columns(2)
+
+with ch1:
+    st.markdown('<div class="section-title">📊 Violations by Type</div>', unsafe_allow_html=True)
+    by_type = analytics.get("by_type", {}) if DB_AVAILABLE else {}
+    if not by_type and not csv_df.empty and "violation_type" in csv_df:
+        by_type = csv_df["violation_type"].value_counts().to_dict()
+
+    if by_type:
+        colors_map = {
+            "NO-Hardhat":      RED,
+            "NO-Safety Vest":  RED,
+            "NO-Mask":         AMBER,
+        }
+        bar_colors = [colors_map.get(k, TEAL) for k in by_type]
+        fig = go.Figure(go.Bar(
+            x=list(by_type.keys()),
+            y=list(by_type.values()),
+            marker_color=bar_colors,
+            marker_line_color="rgba(255,255,255,0.05)",
+            marker_line_width=1,
+        ))
+        fig.update_layout(
+            height=280, margin=dict(l=10, r=10, t=10, b=40),
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(tickfont=dict(size=11, color="rgba(241,245,249,0.5)")),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            showlegend=False,
         )
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     else:
-        st.info("No data available to export.")
-        
+        st.info("No violation data yet.")
+
+with ch2:
+    st.markdown('<div class="section-title">📈 Violations Over Time</div>', unsafe_allow_html=True)
+    daily = analytics.get("daily", []) if DB_AVAILABLE else []
+    if not daily and not csv_df.empty and "timestamp" in csv_df:
+        gd = csv_df.groupby(csv_df["timestamp"].dt.date).size().reset_index()
+        gd.columns = ["date", "count"]
+        daily = [{"date": str(r["date"]), "count": r["count"]} for _, r in gd.iterrows()]
+
+    if daily:
+        dates  = [d["date"] for d in daily]
+        counts = [d["count"] for d in daily]
+        fig = go.Figure(go.Scatter(
+            x=dates, y=counts,
+            mode="lines+markers",
+            line=dict(color=ORANGE, width=2),
+            marker=dict(color=ORANGE, size=5),
+            fill="tozeroy",
+            fillcolor="rgba(249,115,22,0.07)",
+        ))
+        fig.update_layout(
+            height=280, margin=dict(l=10, r=10, t=10, b=40),
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(tickfont=dict(size=10, color="rgba(241,245,249,0.5)"),
+                       tickangle=-30),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            showlegend=False,
+        )
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("No timeline data yet.")
+
+st.markdown("---")
+
+
+# ── Session History ───────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">🗂️ Scan Session History</div>', unsafe_allow_html=True)
+
+if sessions:
+    for s in sessions:
+        status_col = GREEN if s["status"] == "completed" else ORANGE if s["status"] == "running" else AMBER
+        dur = f"{int(s['duration_seconds'] or 0)}s" if s["duration_seconds"] else "—"
+        end = s["end_time"][:19] if s["end_time"] else "—"
+
+        with st.expander(
+            f"📹 Session #{s['session_id']} — {s['scan_type'].replace('_',' ').title()} | "
+            f"{s['total_violations']} violations | {s['start_time'][:19] if s['start_time'] else ''}",
+            expanded=False
+        ):
+            ic1, ic2, ic3, ic4, ic5 = st.columns(5)
+            with ic1: kpi_card("Source",     s["source_name"] or "—",      "📁", TEAL)
+            with ic2: kpi_card("Start",      s["start_time"][:16] if s["start_time"] else "—", "🕐", TEAL)
+            with ic3: kpi_card("End",        end[:16],                      "🏁", TEAL)
+            with ic4: kpi_card("Duration",   dur,                           "⏱️", ORANGE)
+            with ic5: kpi_card("Violations", str(s["total_violations"]),    "🚨",
+                                RED if s["total_violations"] > 0 else GREEN)
+
+            # Load violations for this session
+            v_list = get_session_violations(s["session_id"])
+            if v_list:
+                df_v = pd.DataFrame(v_list)
+                st.dataframe(
+                    df_v[["timestamp", "worker_id", "violation_type", "severity",
+                           "confidence", "frame_number", "status"]],
+                    use_container_width=True,
+                )
+                st.download_button(
+                    f"⬇️ Download Session #{s['session_id']} CSV",
+                    data=df_v.to_csv(index=False),
+                    file_name=f"aegis_session_{s['session_id']}.csv",
+                    mime="text/csv",
+                    key=f"dl_{s['session_id']}",
+                )
+            else:
+                st.info("No violation records for this session.")
+elif not csv_df.empty:
+    st.info("DB offline — showing last 30 rows from CSV fallback.")
+    st.dataframe(csv_df.tail(30), use_container_width=True)
+else:
+    st.info("No scan sessions recorded yet. Run a scan to generate data.")

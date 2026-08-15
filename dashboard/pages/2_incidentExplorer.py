@@ -1,259 +1,206 @@
+"""
+AEGIS Safety Intelligence — Incident Explorer
+Browse, filter, and export individual violation records from the DB.
+"""
 import os
-import time
-import pandas as pd
+from datetime import datetime, date, timedelta
+
 import streamlit as st
-from datetime import datetime
+import pandas as pd
+import plotly.graph_objects as go
 
-# Import UI Utils
-from ui_utils import apply_custom_css, mission_control_header, kpi_card
+from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip
+from db import DB_AVAILABLE, get_recent_sessions, get_session_violations, get_analytics
 
-# ===================== PAGE CONFIG =====================
 st.set_page_config(
-    page_title="AegisAI | Incident Explorer",
-    page_icon="🚨",
+    page_title="AEGIS | Incident Explorer",
+    page_icon="🔍",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_bar="expanded",
 )
-
-# Apply styling
 apply_custom_css()
 
-# ===================== ABSOLUTE PATH RESOLUTION =====================
-current_dir = os.path.dirname(os.path.abspath(__file__))
-dashboard_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(dashboard_dir)
+ORANGE = "#f97316"; RED = "#ef4444"; GREEN = "#22c55e"; TEAL = "#06b6d4"; AMBER = "#fbbf24"
 
-def resolve_log_csv():
-    candidates = [
-        os.path.join(project_root, "violations.csv"),
-        os.path.join(dashboard_dir, "violations.csv"),
-        os.path.join(current_dir, "violations.csv"),
-        "violations.csv"
-    ]
-    for c in candidates:
-        if os.path.exists(c):
-            return c
-    return os.path.join(project_root, "violations.csv")
-
-LOG_CSV = resolve_log_csv()
-
-# Resolve image paths dynamically
-def get_image_path(stored_path):
-    if not stored_path or pd.isna(stored_path):
-        return None
-    stored_path = str(stored_path).replace("\\", "/")
-    filename = os.path.basename(stored_path)
-    
-    check_paths = [
-        os.path.join(project_root, stored_path),
-        os.path.join(project_root, "dashboard", stored_path),
-        os.path.join(project_root, "snapshots", filename),
-        os.path.join(project_root, "dashboard", "snapshots", filename),
-        os.path.join(current_dir, "snapshots", filename),
-        os.path.join(current_dir, filename)
-    ]
-    for p in check_paths:
-        if os.path.exists(p):
-            return p
-    return None
-
-# Load CSV safely
-def load_data():
-    if not os.path.exists(LOG_CSV):
-        return pd.DataFrame()
-    try:
-        df = pd.read_csv(LOG_CSV)
-        if df.empty:
-            return df
-        if "status" not in df.columns:
-            df["status"] = "Violation"
-        else:
-            df["status"] = df["status"].fillna("Violation")
-        return df
-    except Exception as e:
-        st.error(f"Error loading logs: {e}")
-        return pd.DataFrame()
-
-df_raw = load_data()
-
-# Update CSV status transactionally
-def update_incident_status(row_idx, new_status):
-    try:
-        # Load fresh copy to prevent race conditions
-        df_update = pd.read_csv(LOG_CSV)
-        if "status" not in df_update.columns:
-            df_update["status"] = "Violation"
-        df_update.at[row_idx, "status"] = new_status
-        df_update.to_csv(LOG_CSV, index=False)
-        st.toast(f"ℹ️ Incident #{row_idx + 1} status updated to: {new_status}", icon="🛡️")
-        time.sleep(0.5)
-        st.rerun()
-    except Exception as e:
-        st.error(f"Error writing to logs database: {e}")
-
-# ===================== SIDEBAR FILTERS =====================
 with st.sidebar:
     st.markdown("""
-    <div style="text-align:center; padding: 20px 0 10px;">
-        <div style="font-size:2.4rem; margin-bottom:8px; filter: drop-shadow(0 0 16px rgba(239,68,68,0.5));">🚨</div>
-        <div style="font-size:1.05rem; font-weight:800; color:#ffffff; letter-spacing:1.5px;">AEGIS EXPLORER</div>
-        <div style="font-size:0.65rem; color:rgba(255,255,255,0.3); text-transform:uppercase; letter-spacing:2px; margin-top:3px;">Database Query Console</div>
+    <div style="text-align:center;padding:16px 0 10px;">
+        <div style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(249,115,22,0.4));">⛑️</div>
+        <div style="font-size:0.95rem;font-weight:800;color:#fff;letter-spacing:2px;">AEGIS AI</div>
+        <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
+            letter-spacing:2px;margin-top:2px;">Incident Explorer</div>
     </div>
-    <div style="height:1px; background:linear-gradient(90deg, transparent, rgba(239,68,68,0.2), transparent); margin: 10px 0 16px;"></div>
+    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
+        margin:4px 0 14px;"></div>
     """, unsafe_allow_html=True)
-    st.markdown("### 🔍 SEARCH & QUERY")
-    
-    # Search input
-    search_query = st.text_input("Search Worker ID", "").strip()
-    
-    # Status filter
-    status_filter = st.multiselect(
-        "Incident Status",
-        options=["Violation", "Resolved", "Dismissed"],
-        default=["Violation", "Resolved"]
-    )
-    
-    # Class Filter
-    class_filter = st.multiselect(
-        "Breach Category",
-        options=["NO-Hardhat", "NO-Mask", "NO-Safety Vest"],
-        default=["NO-Hardhat", "NO-Mask", "NO-Safety Vest"]
-    )
-    
-    # Sort
-    sort_by = st.selectbox(
-        "Sort Order",
-        options=["Newest First", "Oldest First", "Confidence (High -> Low)"]
-    )
-    
-    st.markdown("---")
-    st.info("💡 **Tip:** Clicking Resolve/Dismiss on any card will instantly update the safety record in `violations.csv`.")
+    navigation_tip()
 
-# ===================== TITLE HEADER =====================
 mission_control_header(
-    "AEGIS <span style='background:linear-gradient(135deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;'>INCIDENT LOG</span> EXPLORER",
-    "SECURE SURVEILLANCE SNAPSHOT AUDITS & INTERACTIVE INCIDENT RESOLUTION"
+    "🔍 INCIDENT EXPLORER",
+    "Drill into individual violation events and session records",
 )
 
-# Empty check
-if df_raw.empty:
-    st.info("💤 **No incident records detected.** Launch active neural scans in the main Command Center to generate logs.")
+if not DB_AVAILABLE:
+    st.markdown("""
+    <div class="warning-stripe">
+        ⚠️ <b>Database offline</b> — reading from CSV fallback. Install <code>sqlalchemy</code>
+        and restart for full DB-backed explorer.
+    </div>
+    """, unsafe_allow_html=True)
+    # CSV fallback
+    current_dir  = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(current_dir))
+    csv_path = next(
+        (p for p in [
+            os.path.join(project_root, "violations.csv"),
+            os.path.join(os.path.dirname(current_dir), "violations.csv"),
+        ] if os.path.exists(p)),
+        None,
+    )
+    if csv_path:
+        df = pd.read_csv(csv_path)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("No violation data found.")
     st.stop()
 
-# ===================== APPLY FILTERS =====================
-# Remember original row indexes for database updates
-df_filtered = df_raw.copy()
-df_filtered["original_idx"] = df_filtered.index
+# ── Load sessions ─────────────────────────────────────────────────────────────
+sessions = get_recent_sessions(50)
 
-# Apply search
-if search_query:
-    df_filtered = df_filtered[df_filtered["worker_id"].astype(str).str.contains(search_query, case=False)]
+if not sessions:
+    st.info("No scan sessions found. Run a scan on the main page to generate data.")
+    st.stop()
 
-# Apply status
-if status_filter:
-    df_filtered = df_filtered[df_filtered["status"].isin(status_filter)]
+# ── Session filter ─────────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">🗂️ Select Session</div>', unsafe_allow_html=True)
 
-# Apply class
-if class_filter:
-    df_filtered = df_filtered[df_filtered["violation_type"].isin(class_filter)]
+session_options = {
+    f"Session #{s['session_id']} — {s['scan_type'].replace('_',' ').title()} | "
+    f"{s['start_time'][:16] if s['start_time'] else ''} | {s['total_violations']} violations": s
+    for s in sessions
+}
 
-# Apply sort
-if sort_by == "Newest First":
-    df_filtered = df_filtered.sort_values(by="timestamp", ascending=False)
-elif sort_by == "Oldest First":
-    df_filtered = df_filtered.sort_values(by="timestamp", ascending=True)
-elif sort_by == "Confidence (High -> Low)":
-    df_filtered = df_filtered.sort_values(by="confidence", ascending=False)
+chosen_label = st.selectbox("Select a scan session to explore:", list(session_options.keys()))
+chosen = session_options[chosen_label]
 
-total_filtered = len(df_filtered)
+# ── Session summary KPIs ──────────────────────────────────────────────────────
+st.markdown('<div class="section-title" style="margin-top:16px;">📋 Session Summary</div>',
+            unsafe_allow_html=True)
 
-# Show Quick KPI Counts
-kcol1, kcol2, kcol3 = st.columns(3)
-with kcol1:
-    kpi_card("Query Matches", total_filtered, "🎯", "#58a6ff")
-with kcol2:
-    kpi_card("Active Breaches", len(df_filtered[df_filtered["status"] == "Violation"]), "🚨", "#f85149")
-with kcol3:
-    kpi_card("Resolved Cases", len(df_filtered[df_filtered["status"] == "Resolved"]), "✅", "#56d364")
+dur = f"{int(chosen['duration_seconds'] or 0)}s" if chosen["duration_seconds"] else "—"
+sc1, sc2, sc3, sc4, sc5, sc6 = st.columns(6)
+with sc1: kpi_card("Session ID",  f"#{chosen['session_id']}",             "🆔",  TEAL)
+with sc2: kpi_card("Scan Type",   chosen["scan_type"].replace("_"," ").title(), "📹", TEAL)
+with sc3: kpi_card("Source",      (chosen["source_name"] or "—")[:18],    "📁",  ORANGE)
+with sc4: kpi_card("Duration",    dur,                                     "⏱️",  ORANGE)
+with sc5: kpi_card("Violations",  str(chosen["total_violations"]),         "🚨",
+                    RED if chosen["total_violations"] > 0 else GREEN)
+with sc6: kpi_card("Status",      chosen["status"].upper(),                "✅",
+                    GREEN if chosen["status"] == "completed" else ORANGE)
 
-st.markdown('<div style="height: 10px;"></div>', unsafe_allow_html=True)
+# ── Load violations for this session ─────────────────────────────────────────
+v_list = get_session_violations(chosen["session_id"])
 
-# ===================== PAGINATION =====================
-ITEMS_PER_PAGE = 6
-total_pages = max(1, -(-total_filtered // ITEMS_PER_PAGE)) # ceiling division
+if not v_list:
+    st.info("No violation records for this session.")
+    st.stop()
 
-# Page selector in main area (clean center style)
-pcol1, pcol2, pcol3 = st.columns([2, 1, 2])
-with pcol2:
-    page = st.number_input("Page selector", min_value=1, max_value=total_pages, value=1, step=1, label_visibility="collapsed")
-    st.markdown(f'<p style="text-align:center; font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:-5px;">Page {page} of {total_pages}</p>', unsafe_allow_html=True)
+df = pd.DataFrame(v_list)
+df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-# Get slice
-start_idx = (page - 1) * ITEMS_PER_PAGE
-end_idx = start_idx + ITEMS_PER_PAGE
-df_page = df_filtered.iloc[start_idx:end_idx]
+st.markdown("---")
 
-# ===================== GRID PRESENTATION =====================
-if df_page.empty:
-    st.info("No safety breaches match your active filters.")
-else:
-    # 3-column grid
-    cols = st.columns(3)
-    
-    for i, (_, row) in enumerate(df_page.iterrows()):
-        col = cols[i % 3]
-        orig_idx = int(row["original_idx"])
-        
-        # Get resolved image path
-        img_path = get_image_path(row["snapshot_path"])
-        
-        # Draw Incident Card inside column
-        with col:
-            st.markdown(f'<div class="glass-card" style="margin-bottom:15px; border-top: 3px solid {"#f85149" if row["status"] == "Violation" else "#56d364" if row["status"] == "Resolved" else "#e3b341"};">', unsafe_allow_html=True)
-            
-            # Show Image Snapshot
-            if img_path:
-                st.image(img_path, use_container_width=True)
-            else:
-                # Tech-looking warning placeholder
-                st.markdown("""
-                <div style="background-color:#161f30; height:150px; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; margin-bottom:10px;">
-                    <span style="font-size:2.5rem; margin-bottom:5px;">📷</span>
-                    <span style="font-size:0.75rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:1px;">Snapshot Offline</span>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            # Details Layout
-            st.markdown(f"""
-            <div style="margin-top: 10px; margin-bottom: 12px;">
-                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:rgba(255,255,255,0.4); font-family: 'JetBrains Mono', monospace; margin-bottom:5px;">
-                    <span>IDX: #{orig_idx+1}</span>
-                    <span>{row["timestamp"]}</span>
-                </div>
-                <h4 style="margin: 0 0 6px 0; color:#ffffff; font-weight:700;">{row["violation_type"]}</h4>
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:rgba(255,255,255,0.7);">
-                    <span>Worker: <b style="color:#58a6ff;">{row["worker_id"]}</b></span>
-                    <span>Confidence: <b style="color:#00d4ff; font-family: 'JetBrains Mono';">{row["confidence"]:.2f}</b></span>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Interactive Action Selectbox
-            status_options = ["Violation", "Resolved", "Dismissed"]
-            curr_status = row["status"]
-            if curr_status not in status_options:
-                status_options.append(curr_status)
-                
-            selected_action = st.selectbox(
-                "Change Action Status",
-                options=status_options,
-                index=status_options.index(curr_status),
-                key=f"status_select_{orig_idx}",
-                label_visibility="collapsed"
-            )
-            
-            # Write to CSV if changed
-            if selected_action != curr_status:
-                update_incident_status(orig_idx, selected_action)
-                
-            st.markdown("</div>", unsafe_allow_html=True)
+# ── Filters ───────────────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">🔎 Filter Violations</div>', unsafe_allow_html=True)
+fc1, fc2, fc3 = st.columns(3)
+
+with fc1:
+    types = ["All"] + sorted(df["violation_type"].unique().tolist())
+    sel_type = st.selectbox("Violation Type", types, key="explorer_type")
+
+with fc2:
+    severities = ["All", "CRITICAL", "HIGH", "MEDIUM"]
+    sel_sev = st.selectbox("Severity", severities, key="explorer_sev")
+
+with fc3:
+    workers = ["All"] + sorted(df["worker_id"].dropna().unique().tolist())
+    sel_worker = st.selectbox("Worker ID", workers, key="explorer_worker")
+
+# Apply filters
+fdf = df.copy()
+if sel_type   != "All": fdf = fdf[fdf["violation_type"] == sel_type]
+if sel_sev    != "All": fdf = fdf[fdf["severity"]       == sel_sev]
+if sel_worker != "All": fdf = fdf[fdf["worker_id"]      == sel_worker]
+
+st.markdown(f"""
+<div style="font-size:0.8rem;color:rgba(241,245,249,0.4);margin-bottom:12px;">
+    Showing <b style="color:#f97316;">{len(fdf)}</b> of {len(df)} violation records
+</div>
+""", unsafe_allow_html=True)
+
+# ── Mini charts ───────────────────────────────────────────────────────────────
+mc1, mc2 = st.columns(2)
+
+with mc1:
+    st.markdown('<div class="section-title">Violations by Type</div>', unsafe_allow_html=True)
+    type_counts = fdf["violation_type"].value_counts()
+    if not type_counts.empty:
+        bar_colors = [RED if "Hardhat" in k or "Vest" in k else AMBER for k in type_counts.index]
+        fig = go.Figure(go.Bar(
+            x=type_counts.index.tolist(),
+            y=type_counts.values.tolist(),
+            marker_color=bar_colors,
+        ))
+        fig.update_layout(
+            height=220, margin=dict(l=5, r=5, t=5, b=30),
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(tickfont=dict(size=10, color="rgba(241,245,249,0.5)")),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            showlegend=False,
+        )
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("No data with current filters.")
+
+with mc2:
+    st.markdown('<div class="section-title">Violations Timeline</div>', unsafe_allow_html=True)
+    if not fdf.empty and "timestamp" in fdf:
+        tdf = fdf.set_index("timestamp").resample("1min")["violation_id"].count().reset_index()
+        tdf.columns = ["time", "count"]
+        fig = go.Figure(go.Scatter(
+            x=tdf["time"], y=tdf["count"],
+            mode="lines+markers",
+            line=dict(color=ORANGE, width=2),
+            marker=dict(color=ORANGE, size=5),
+            fill="tozeroy", fillcolor="rgba(249,115,22,0.07)",
+        ))
+        fig.update_layout(
+            height=220, margin=dict(l=5, r=5, t=5, b=30),
+            template="plotly_dark",
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(tickfont=dict(size=9, color="rgba(241,245,249,0.4)"), tickangle=-20),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            showlegend=False,
+        )
+        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    else:
+        st.info("No timeline data.")
+
+# ── Violation Table ────────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">📋 Violation Records</div>', unsafe_allow_html=True)
+
+cols_to_show = ["timestamp", "worker_id", "violation_type", "severity",
+                "confidence", "frame_number", "status"]
+available = [c for c in cols_to_show if c in fdf.columns]
+st.dataframe(fdf[available].sort_values("timestamp", ascending=False),
+             use_container_width=True)
+
+# ── Download ──────────────────────────────────────────────────────────────────
+st.download_button(
+    "⬇️ Download Filtered Records (CSV)",
+    data=fdf.to_csv(index=False),
+    file_name=f"aegis_incidents_session{chosen['session_id']}.csv",
+    mime="text/csv",
+)

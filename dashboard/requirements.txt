@@ -7,3 +7,4 @@ gdown
 numpy
 pandas
 plotly
+sqlalchemy
