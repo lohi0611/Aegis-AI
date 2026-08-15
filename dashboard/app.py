@@ -20,9 +20,11 @@ import plotly.graph_objects as go
 # ── App modules ───────────────────────────────────────────────────────────────
 from ui_utils import (
     apply_custom_css, render_brand_header, kpi_card,
-    draw_violation_feed_card, draw_site_status,
+    draw_violation_feed_card, draw_site_status, draw_system_status,
     navigation_tip, standby_placeholder, scan_complete_placeholder,
-    mission_control_header, render_theme_toggle,
+    mission_control_header, render_theme_toggle, section_label,
+    get_plotly_layout_defaults, ICONS,
+    ORANGE, RED, GREEN, TEAL, AMBER, BLUE,
 )
 from detect import PPEDetector
 from db import (
@@ -115,7 +117,7 @@ class CentroidTracker:
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="AEGIS | Construction Safety Intelligence",
-    page_icon="⛑️",
+    page_icon="⛑",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -166,15 +168,16 @@ if not os.path.isfile(LOG_CSV):
 #  SESSION STATE DEFAULTS
 # ─────────────────────────────────────────────────────────────────────────────
 _defaults = {
-    "running":             False,
-    "session_rows":        [],
-    "total_frames_scanned":0,
-    "fps_history":         [],
-    "time_history":        [],
-    "current_run_id":      0,
-    "db_session_id":       None,
-    "scan_start_time":     None,
-    "tracker":             None,
+    "running":              False,
+    "session_rows":         [],
+    "total_frames_scanned": 0,
+    "fps_history":          [],
+    "time_history":         [],
+    "current_run_id":       0,
+    "db_session_id":        None,
+    "scan_start_time":      None,
+    "tracker":              None,
+    "aegis_theme":          "dark",
 }
 for k, v in _defaults.items():
     if k not in st.session_state:
@@ -185,54 +188,60 @@ for k, v in _defaults.items():
 #  SIDEBAR
 # ─────────────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align:center;padding:20px 0 12px;">
-        <div style="font-size:2.8rem;filter:drop-shadow(0 0 14px rgba(249,115,22,0.5));">&#9937;</div>
-        <div style="font-size:1.05rem;font-weight:800;color:#ffffff;letter-spacing:2px;margin-top:6px;">AEGIS AI</div>
-        <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
-            letter-spacing:2.5px;margin-top:3px;">Safety Intelligence Platform</div>
+    # ── Brand ──────────────────────────────────────────────────────────────
+    st.markdown(f"""
+<div style="padding:20px 16px 16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div style="width:32px;height:32px;background:rgba(249,168,37,0.12);
+            border:1.5px solid rgba(249,168,37,0.25);border-radius:8px;
+            display:flex;align-items:center;justify-content:center;color:#F9A825;flex-shrink:0;">
+            {ICONS['hardhat']}
+        </div>
+        <div>
+            <div style="font-size:0.95rem;font-weight:800;color:#E8EDF2;letter-spacing:2px;">AEGIS AI</div>
+            <div style="font-size:0.6rem;color:rgba(232,237,242,0.3);letter-spacing:0.5px;">Safety Intelligence Platform</div>
+        </div>
     </div>
-    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
-        margin:4px 0 10px;"></div>
-    """, unsafe_allow_html=True)
+</div>
+<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 4px;"></div>
+""", unsafe_allow_html=True)
 
-    render_theme_toggle()
-    st.markdown("### ⚙️ CONFIGURATION")
+    # ── Config ─────────────────────────────────────────────────────────────
+    st.markdown("<div style='padding:0 16px;'>", unsafe_allow_html=True)
+    st.markdown("### Configuration")
 
     sources = ["Laptop Camera (Browser)"]
     if sample_video:
         sources.append("Sample Video")
     sources += ["Upload Video File", "Local Webcam (OpenCV)"]
-    video_source = st.selectbox("Video Input Source", sources)
+    video_source = st.selectbox("Video input source", sources)
 
-    confidence_slider = st.slider("Detection Confidence", 0.1, 1.0, 0.25, step=0.01)
-    line_thickness    = st.slider("Bounding Box Thickness", 1, 5, 2)
+    confidence_slider = st.slider("Detection confidence", 0.1, 1.0, 0.25, step=0.01)
+    line_thickness    = st.slider("Bounding box thickness", 1, 5, 2)
 
     alert_classes = st.multiselect(
-        "Violations To Monitor",
+        "Violations to monitor",
         options=VIOLATION_CLASSES,
         default=VIOLATION_CLASSES,
     )
 
     uploaded_file = None
     if video_source == "Upload Video File":
-        uploaded_file = st.file_uploader("Upload Video File", type=["mp4", "avi", "mov"])
+        uploaded_file = st.file_uploader("Upload video file", type=["mp4", "avi", "mov"])
 
-    use_dshow = st.checkbox("Enhanced Hardware Access (Windows)", value=True)
+    use_dshow = st.checkbox("Enhanced hardware access (Windows)", value=True)
 
-    st.markdown("---")
-    st.markdown("### 🎮 CONTROL PANEL")
+    st.markdown("### Controls")
 
     col_c1, col_c2 = st.columns(2)
     with col_c1:
-        start_btn = st.button("▶ START SCAN")
+        start_btn = st.button("Start scan", key="start_scan_btn")
     with col_c2:
         st.markdown('<div class="stop-btn">', unsafe_allow_html=True)
-        stop_btn = st.button("⏹ STOP SCAN")
+        stop_btn = st.button("Stop scan", key="stop_scan_btn")
         st.markdown('</div>', unsafe_allow_html=True)
 
     if start_btn:
-        # Create DB session
         source_map = {
             "Laptop Camera (Browser)": "laptop_camera",
             "Sample Video":            "sample_video",
@@ -258,7 +267,6 @@ with st.sidebar:
 
     if stop_btn:
         st.session_state.running = False
-        # Close DB session
         if st.session_state.db_session_id is not None:
             elapsed = time.time() - (st.session_state.scan_start_time or time.time())
             close_scan_session(
@@ -268,30 +276,35 @@ with st.sidebar:
                 status="stopped",
             )
 
+    st.markdown("---")
     navigation_tip()
 
+    # DB status at bottom of sidebar
     if DB_AVAILABLE:
-        st.markdown('<div class="db-status-ok" style="margin-top:8px;">⬤ Database connected</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div style="padding:4px 0;display:flex;align-items:center;gap:6px;"><span class="dot dot-green"></span><span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">Database connected</span></div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="db-status-off" style="margin-top:8px;">⬤ DB offline — CSV fallback active</div>',
-                    unsafe_allow_html=True)
+        st.markdown('<div style="padding:4px 0;display:flex;align-items:center;gap:6px;"><span class="dot dot-amber"></span><span style="font-size:0.7rem;color:rgba(232,237,242,0.45);">DB offline — CSV fallback</span></div>', unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  BRAND HEADER
+#  HEADER ROW (brand + theme toggle)
 # ─────────────────────────────────────────────────────────────────────────────
-render_brand_header(
-    is_scanning=st.session_state.running,
-    db_ok=DB_AVAILABLE,
-)
+hdr_left, hdr_right = st.columns([10, 1])
+with hdr_left:
+    render_brand_header(
+        is_scanning=st.session_state.running,
+        db_ok=DB_AVAILABLE,
+    )
+with hdr_right:
+    st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
+    render_theme_toggle()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  KPI BANNER
+#  KPI BANNER (6 cards)
 # ─────────────────────────────────────────────────────────────────────────────
-ORANGE = "#f97316"; RED = "#ef4444"; GREEN = "#22c55e"; TEAL = "#06b6d4"; AMBER = "#fbbf24"
-
 def compute_kpis():
     rows      = st.session_state.session_rows
     breaches  = len(rows)
@@ -305,47 +318,68 @@ def compute_kpis():
     return breaches, critical, frames, avg_fps, score, dur_str
 
 kpi_cols = st.columns(6)
-kpi_ph   = [c.empty() for c in kpi_cols]    # placeholders, updated during scan
 
 def render_kpis(breaches, critical, frames, avg_fps, score, dur_str):
-    with kpi_cols[0]: kpi_card("Violations", str(breaches), "🚨", RED)
-    with kpi_cols[1]: kpi_card("Critical", str(critical), "🔥", RED if critical else GREEN)
-    with kpi_cols[2]: kpi_card("Frames Scanned", str(frames), "👁️", TEAL)
-    with kpi_cols[3]: kpi_card("Safety Score", f"{score}%", "🛡️",
-                                GREEN if score >= 80 else AMBER if score >= 50 else RED)
-    with kpi_cols[4]: kpi_card("Sensor FPS", f"{avg_fps:.1f}" if avg_fps else "STANDBY", "⚡", TEAL)
-    with kpi_cols[5]: kpi_card("Scan Duration", dur_str, "⏱️", ORANGE)
+    with kpi_cols[0]:
+        kpi_card("Violations",    str(breaches),
+                 "alert-triangle",
+                 "kpi-red" if breaches > 0 else "kpi-green")
+    with kpi_cols[1]:
+        kpi_card("Critical",      str(critical),
+                 "x-circle",
+                 "kpi-red" if critical > 0 else "kpi-teal")
+    with kpi_cols[2]:
+        kpi_card("Frames scanned", str(frames),   "eye",      "kpi-teal")
+    with kpi_cols[3]:
+        kpi_card("Safety score",
+                 f"{score}%",
+                 "shield",
+                 "kpi-green" if score >= 80 else ("kpi-yellow" if score >= 50 else "kpi-red"))
+    with kpi_cols[4]:
+        kpi_card("Sensor FPS",
+                 f"{avg_fps:.1f}" if avg_fps else "Standby",
+                 "zap",   "kpi-teal")
+    with kpi_cols[5]:
+        kpi_card("Scan duration", dur_str,         "clock",   "kpi-yellow")
 
 render_kpis(0, 0, 0, 0, 100.0, "00:00")
-st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
+st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  MAIN MONITORING GRID
+#  MAIN MONITORING GRID  (65 / 35 split)
 # ─────────────────────────────────────────────────────────────────────────────
-col_left, col_right = st.columns([2.5, 1.2])
+col_left, col_right = st.columns([2.2, 1.0])
 
 with col_left:
-    st.markdown('<div class="section-title">📹 Live Safety Monitor</div>', unsafe_allow_html=True)
+    section_label("Live safety monitor", "camera")
     video_ph = st.empty()
 
 with col_right:
-    st.markdown('<div class="section-title">⚠️ Site Status</div>', unsafe_allow_html=True)
+    section_label("Site condition", "shield")
     status_ph = st.empty()
-    st.markdown('<div class="section-title" style="margin-top:12px;">🚨 Live Violation Feed</div>',
-                unsafe_allow_html=True)
+
+    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    section_label("System status", "cpu")
+    sys_status_ph = st.empty()
+    with sys_status_ph:
+        draw_system_status(DB_AVAILABLE, st.session_state.running)
+
+    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    section_label("Violation feed", "alert-triangle")
     feed_ph = st.container()
 
-# ── Lower section ─────────────────────────────────────────────────────────────
-st.markdown("---")
-c_perf, c_logs = st.columns([1.5, 2.2])
+
+# ── Bottom analytics row ──────────────────────────────────────────────────────
+st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
+c_perf, c_logs = st.columns([1.4, 2.2])
 
 with c_perf:
-    st.markdown('<div class="section-title">📈 Scan Performance</div>', unsafe_allow_html=True)
+    section_label("Scan performance", "activity")
     perf_ph = st.empty()
 
 with c_logs:
-    st.markdown('<div class="section-title">📋 Violation Log</div>', unsafe_allow_html=True)
+    section_label("Violation log", "database")
     logs_ph = st.empty()
 
 
@@ -411,6 +445,35 @@ def log_violation(tracker, w_id, d, frame_number, annotated_frame):
 # ─────────────────────────────────────────────────────────────────────────────
 #  SHARED UI REFRESH
 # ─────────────────────────────────────────────────────────────────────────────
+def _perf_chart(fps_history, time_history, key: str):
+    """Build and return FPS Plotly figure."""
+    layout_kw = get_plotly_layout_defaults()
+    fig = go.Figure()
+    if fps_history:
+        fig.add_trace(go.Scatter(
+            x=list(time_history), y=list(fps_history),
+            mode="lines",
+            line=dict(color=ORANGE, width=2),
+            fill="tozeroy",
+            fillcolor=f"rgba(249,168,37,0.07)",
+            name="FPS",
+        ))
+    fig.update_layout(
+        height=180,
+        margin=dict(l=10, r=10, t=10, b=10),
+        showlegend=False,
+        xaxis=dict(showgrid=False, visible=False, **layout_kw.get("xaxis", {})),
+        yaxis=dict(
+            showgrid=True,
+            title=dict(text="FPS", font=dict(color=ORANGE, size=10)),
+            tickfont=dict(color=ORANGE, size=9),
+            gridcolor=layout_kw["xaxis"]["gridcolor"],
+        ),
+        **{k: v for k, v in layout_kw.items() if k not in ("xaxis", "yaxis")},
+    )
+    return fig
+
+
 def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
     """Refresh video, KPIs, perf chart, feed and log table."""
     video_ph.image(annotated, use_container_width=True)
@@ -418,31 +481,19 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
     breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
     render_kpis(breaches, critical, total_frames, fps, score, dur_str)
 
-    # Site status panel
     with status_ph:
         draw_site_status(breaches, critical)
 
+    with sys_status_ph:
+        draw_system_status(DB_AVAILABLE, True)
+
     # Performance chart
-    fig = go.Figure()
-    if fps_history:
-        fig.add_trace(go.Scatter(
-            x=list(time_history), y=list(fps_history),
-            mode="lines",
-            line=dict(color="#f97316", width=2),
-            fill="tozeroy",
-            fillcolor="rgba(249,115,22,0.08)",
-        ))
-    fig.update_layout(
-        height=170, margin=dict(l=10, r=10, t=10, b=10),
-        template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=False, visible=False),
-        yaxis=dict(showgrid=False, title=dict(text="FPS", font=dict(color="#f97316")),
-                   tickfont=dict(color="#f97316")),
+    perf_ph.plotly_chart(
+        _perf_chart(fps_history, time_history, key=f"fps_{total_frames}"),
+        use_container_width=True,
+        config={"displayModeBar": False},
+        key=f"fps_chart_{total_frames}",
     )
-    perf_ph.plotly_chart(fig, use_container_width=True,
-                         config={"displayModeBar": False},
-                         key=f"fps_chart_{total_frames}")
 
     # Violation feed
     with feed_ph:
@@ -458,7 +509,10 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
                     status=r[9],
                 )
         else:
-            st.info("No violations detected yet.")
+            st.markdown("""
+<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.78rem;">
+    No violations detected yet.
+</div>""", unsafe_allow_html=True)
 
     # Violation log table
     if st.session_state.session_rows:
@@ -471,17 +525,30 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
 
 
 def draw_empty_perf():
+    layout_kw = get_plotly_layout_defaults()
     fig = go.Figure()
     fig.update_layout(
-        height=170, margin=dict(l=10, r=10, t=10, b=10),
-        template="plotly_dark",
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-        xaxis=dict(showgrid=False, visible=False),
-        yaxis=dict(showgrid=False),
+        height=180,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+        **{k: v for k, v in layout_kw.items() if k not in ("xaxis", "yaxis")},
+    )
+    # Empty state message
+    fig.add_annotation(
+        text="No scan data yet — start a scan to see performance metrics",
+        xref="paper", yref="paper",
+        x=0.5, y=0.5, showarrow=False,
+        font=dict(size=11, color="rgba(232,237,242,0.25)", family="Inter"),
     )
     perf_ph.plotly_chart(fig, use_container_width=True,
                          config={"displayModeBar": False}, key="empty_perf_chart")
-    logs_ph.info("Awaiting scan activation…")
+    logs_ph.markdown("""
+<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.8rem;
+    background:var(--bg-card-2);border-radius:var(--r);border:1px solid var(--border-subtle);">
+    <div style="margin-bottom:6px;opacity:0.5;">No incidents detected</div>
+    <div style="font-size:0.72rem;">Your monitoring session is currently clear.</div>
+</div>""", unsafe_allow_html=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -493,7 +560,7 @@ if video_source == "Laptop Camera (Browser)":
         val = auto_camera(key="auto_camera_key")
 
         if not val:
-            video_ph.info("📷 Connecting to camera… Please allow browser camera access.")
+            video_ph.info("Connecting to camera… Please allow browser camera access.")
         elif isinstance(val, str) and val.startswith("ERROR:"):
             st.error(f"Webcam Error: {val}")
             st.session_state.running = False
@@ -536,8 +603,7 @@ if video_source == "Laptop Camera (Browser)":
             refresh_ui(annotated, fps, st.session_state.total_frames_scanned,
                        st.session_state.fps_history, st.session_state.time_history)
     else:
-        # Standby / post-scan state handled below in else block
-        pass
+        pass   # handled in standby/post-scan block below
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -558,7 +624,7 @@ elif st.session_state.running:
             tmp.close()
             cap_src = tmp.name
         else:
-            st.warning("⚠️ Please upload a video file to begin.")
+            st.warning("Please upload a video file to begin.")
             st.session_state.running = False
             st.stop()
     elif video_source == "Local Webcam (OpenCV)":
@@ -567,9 +633,9 @@ elif st.session_state.running:
     if cap_src is None:
         if sample_video:
             cap_src = sample_video
-            st.info("ℹ️ Using sample video for demonstration.")
+            st.info("Using sample video for demonstration.")
         else:
-            st.warning("⚠️ Please upload a video file or select a valid source.")
+            st.warning("Please upload a video file or select a valid source.")
             st.session_state.running = False
             st.stop()
 
@@ -580,11 +646,11 @@ elif st.session_state.running:
         cap = cv2.VideoCapture(cap_src)
 
     if not cap.isOpened() and cap_src != sample_video and sample_video:
-        st.info("ℹ️ Local webcam not available on cloud. Falling back to sample video.")
+        st.info("Local webcam not available on cloud. Falling back to sample video.")
         cap = cv2.VideoCapture(sample_video)
 
     if not cap.isOpened():
-        st.error("🚨 Unable to open video stream.")
+        st.error("Unable to open video stream.")
         st.session_state.running = False
         st.stop()
 
@@ -657,7 +723,7 @@ elif st.session_state.running:
 # ─────────────────────────────────────────────────────────────────────────────
 else:
     if st.session_state.session_rows:
-        # Post-scan summary
+        # ── Post-scan summary ──────────────────────────────────────────────
         rows     = st.session_state.session_rows
         frames   = st.session_state.total_frames_scanned
         breaches = len(rows)
@@ -680,27 +746,17 @@ else:
         with status_ph:
             draw_site_status(breaches, critical)
 
+        with sys_status_ph:
+            draw_system_status(DB_AVAILABLE, False)
+
         # Perf chart from history
-        fig = go.Figure()
-        if st.session_state.fps_history:
-            fig.add_trace(go.Scatter(
-                x=list(st.session_state.time_history),
-                y=list(st.session_state.fps_history),
-                mode="lines",
-                line=dict(color="#f97316", width=2),
-                fill="tozeroy",
-                fillcolor="rgba(249,115,22,0.08)",
-            ))
-        fig.update_layout(
-            height=170, margin=dict(l=10, r=10, t=10, b=10),
-            template="plotly_dark",
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(showgrid=False, visible=False),
-            yaxis=dict(showgrid=False, title=dict(text="FPS", font=dict(color="#f97316")),
-                       tickfont=dict(color="#f97316")),
+        perf_ph.plotly_chart(
+            _perf_chart(st.session_state.fps_history, st.session_state.time_history,
+                        key="post_scan"),
+            use_container_width=True,
+            config={"displayModeBar": False},
+            key="post_scan_perf",
         )
-        perf_ph.plotly_chart(fig, use_container_width=True,
-                             config={"displayModeBar": False}, key="post_scan_perf")
 
         with feed_ph:
             recent = rows[-5:]
@@ -721,19 +777,18 @@ else:
             use_container_width=True,
         )
 
-        # Download button
         st.download_button(
-            "⬇️ Download Violation Report (CSV)",
+            "Download violation report (CSV)",
             data=df.to_csv(index=False),
             file_name=f"aegis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
             mime="text/csv",
         )
 
     else:
-        # Initial standby
+        # ── Initial standby ────────────────────────────────────────────────
         render_kpis(0, 0, 0, 0, 100.0, "00:00")
         with video_ph:
-            standby_placeholder()
+            standby_placeholder(DB_AVAILABLE)
         with status_ph:
             draw_site_status(0, 0)
         draw_empty_perf()

@@ -1,6 +1,6 @@
 """
 AEGIS Safety Intelligence — Incident Explorer
-Browse, filter, and export individual violation records from the DB.
+Browse, filter, and export individual violation records from the database.
 """
 import os
 from datetime import datetime, date, timedelta
@@ -9,45 +9,59 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-from ui_utils import apply_custom_css, mission_control_header, kpi_card, navigation_tip, render_theme_toggle
+from ui_utils import (
+    apply_custom_css, mission_control_header, kpi_card,
+    navigation_tip, render_theme_toggle, section_label,
+    get_plotly_layout_defaults, ICONS, ORANGE, RED, GREEN, TEAL, AMBER,
+)
 from db import DB_AVAILABLE, get_recent_sessions, get_session_violations, get_analytics
 
 st.set_page_config(
     page_title="AEGIS | Incident Explorer",
-    page_icon="🔍",
+    page_icon="⛑",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 apply_custom_css()
 
-ORANGE = "#f97316"; RED = "#ef4444"; GREEN = "#22c55e"; TEAL = "#06b6d4"; AMBER = "#fbbf24"
-
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("""
-    <div style="text-align:center;padding:16px 0 10px;">
-        <div style="font-size:2.2rem;filter:drop-shadow(0 0 10px rgba(249,115,22,0.4));">&#9937;</div>
-        <div style="font-size:0.95rem;font-weight:800;color:#fff;letter-spacing:2px;">AEGIS AI</div>
-        <div style="font-size:0.6rem;color:rgba(241,245,249,0.3);text-transform:uppercase;
-            letter-spacing:2px;margin-top:2px;">Incident Explorer</div>
+    st.markdown(f"""
+<div style="padding:20px 16px 16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+        <div style="width:32px;height:32px;background:rgba(249,168,37,0.12);
+            border:1.5px solid rgba(249,168,37,0.25);border-radius:8px;
+            display:flex;align-items:center;justify-content:center;color:#F9A825;flex-shrink:0;">
+            {ICONS['hardhat']}
+        </div>
+        <div>
+            <div style="font-size:0.95rem;font-weight:800;color:#E8EDF2;letter-spacing:2px;">AEGIS AI</div>
+            <div style="font-size:0.6rem;color:rgba(232,237,242,0.3);letter-spacing:0.5px;">Incident Explorer</div>
+        </div>
     </div>
-    <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,115,22,0.2),transparent);
-        margin:4px 0 10px;"></div>
-    """, unsafe_allow_html=True)
+</div>
+<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 8px;"></div>
+<div style="padding:0 16px;">
+""", unsafe_allow_html=True)
     render_theme_toggle()
     navigation_tip()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-mission_control_header(
-    "🔍 INCIDENT EXPLORER",
-    "Drill into individual violation events and session records",
-)
+# ── Header ────────────────────────────────────────────────────────────────────
+hdr_l, hdr_r = st.columns([10, 1])
+with hdr_l:
+    mission_control_header("Incident Explorer", "Drill into individual violation events and session records")
+with hdr_r:
+    st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
+    render_theme_toggle()
 
 if not DB_AVAILABLE:
     st.markdown("""
-    <div class="warning-stripe">
-        ⚠️ <b>Database offline</b> — reading from CSV fallback. Install <code>sqlalchemy</code>
-        and restart for full DB-backed explorer.
-    </div>
-    """, unsafe_allow_html=True)
+<div class="warning-stripe">
+    Database offline — reading from CSV fallback. Install <code>sqlalchemy</code>
+    and restart for full database-backed explorer.
+</div>
+""", unsafe_allow_html=True)
     # CSV fallback
     current_dir  = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(current_dir))
@@ -70,11 +84,14 @@ if not DB_AVAILABLE:
 sessions = get_recent_sessions(50)
 
 if not sessions:
-    st.info("No scan sessions found. Run a scan on the main page to generate data.")
+    st.markdown("""<div style="padding:40px;text-align:center;color:var(--text-muted);font-size:0.8rem;
+        background:var(--bg-card-2);border-radius:var(--r);border:1px solid var(--border-subtle);">
+        No scan sessions found. Run a scan on the Safety Monitor page to generate data.
+    </div>""", unsafe_allow_html=True)
     st.stop()
 
-# ── Session filter ─────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">🗂️ Select Session</div>', unsafe_allow_html=True)
+# ── Session selector ──────────────────────────────────────────────────────────
+section_label("Select session", "camera")
 
 session_options = {
     f"Session #{s['session_id']} — {s['scan_type'].replace('_',' ').title()} | "
@@ -86,47 +103,50 @@ chosen_label = st.selectbox("Select a scan session to explore:", list(session_op
 chosen = session_options[chosen_label]
 
 # ── Session summary KPIs ──────────────────────────────────────────────────────
-st.markdown('<div class="section-title" style="margin-top:16px;">📋 Session Summary</div>',
-            unsafe_allow_html=True)
+st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
+section_label("Session overview", "activity")
 
 dur = f"{int(chosen['duration_seconds'] or 0)}s" if chosen["duration_seconds"] else "—"
 sc1, sc2, sc3, sc4, sc5, sc6 = st.columns(6)
-with sc1: kpi_card("Session ID",  f"#{chosen['session_id']}",             "🆔",  TEAL)
-with sc2: kpi_card("Scan Type",   chosen["scan_type"].replace("_"," ").title(), "📹", TEAL)
-with sc3: kpi_card("Source",      (chosen["source_name"] or "—")[:18],    "📁",  ORANGE)
-with sc4: kpi_card("Duration",    dur,                                     "⏱️",  ORANGE)
-with sc5: kpi_card("Violations",  str(chosen["total_violations"]),         "🚨",
-                    RED if chosen["total_violations"] > 0 else GREEN)
-with sc6: kpi_card("Status",      chosen["status"].upper(),                "✅",
-                    GREEN if chosen["status"] == "completed" else ORANGE)
+with sc1: kpi_card("Session ID",  f"#{chosen['session_id']}",             "database",  "kpi-teal")
+with sc2: kpi_card("Scan type",   chosen["scan_type"].replace("_"," ").title(), "camera", "kpi-teal")
+with sc3: kpi_card("Source",      (chosen["source_name"] or "—")[:16],    "eye",       "kpi-yellow")
+with sc4: kpi_card("Duration",    dur,                                     "clock",     "kpi-yellow")
+with sc5: kpi_card("Violations",  str(chosen["total_violations"]),         "alert-triangle",
+                    "kpi-red" if chosen["total_violations"] > 0 else "kpi-green")
+with sc6: kpi_card("Status",      chosen["status"].capitalize(),           "check-circle",
+                    "kpi-green" if chosen["status"] == "completed" else "kpi-yellow")
 
-# ── Load violations for this session ─────────────────────────────────────────
+# ── Load violations for chosen session ────────────────────────────────────────
 v_list = get_session_violations(chosen["session_id"])
 
 if not v_list:
-    st.info("No violation records for this session.")
+    st.markdown("""<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.8rem;
+        background:var(--bg-card-2);border-radius:var(--r);border:1px solid var(--border-subtle);margin-top:16px;">
+        No violation records logged for this session.
+    </div>""", unsafe_allow_html=True)
     st.stop()
 
 df = pd.DataFrame(v_list)
 df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
-st.markdown("---")
+st.markdown('<hr>', unsafe_allow_html=True)
 
 # ── Filters ───────────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">🔎 Filter Violations</div>', unsafe_allow_html=True)
+section_label("Filter incidents", "eye")
 fc1, fc2, fc3 = st.columns(3)
 
 with fc1:
     types = ["All"] + sorted(df["violation_type"].unique().tolist())
-    sel_type = st.selectbox("Violation Type", types, key="explorer_type")
+    sel_type = st.selectbox("Violation type", types, key="explorer_type")
 
 with fc2:
     severities = ["All", "CRITICAL", "HIGH", "MEDIUM"]
-    sel_sev = st.selectbox("Severity", severities, key="explorer_sev")
+    sel_sev = st.selectbox("Severity level", severities, key="explorer_sev")
 
 with fc3:
     workers = ["All"] + sorted(df["worker_id"].dropna().unique().tolist())
-    sel_worker = st.selectbox("Worker ID", workers, key="explorer_worker")
+    sel_worker = st.selectbox("Worker identifier", workers, key="explorer_worker")
 
 # Apply filters
 fdf = df.copy()
@@ -135,38 +155,39 @@ if sel_sev    != "All": fdf = fdf[fdf["severity"]       == sel_sev]
 if sel_worker != "All": fdf = fdf[fdf["worker_id"]      == sel_worker]
 
 st.markdown(f"""
-<div style="font-size:0.8rem;color:rgba(241,245,249,0.4);margin-bottom:12px;">
-    Showing <b style="color:#f97316;">{len(fdf)}</b> of {len(df)} violation records
+<div style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 14px;">
+    Showing <b style="color:var(--accent);">{len(fdf)}</b> of {len(df)} recorded incidents
 </div>
 """, unsafe_allow_html=True)
 
 # ── Mini charts ───────────────────────────────────────────────────────────────
 mc1, mc2 = st.columns(2)
+layout_kw = get_plotly_layout_defaults()
 
 with mc1:
-    st.markdown('<div class="section-title">Violations by Type</div>', unsafe_allow_html=True)
+    section_label("Distribution by type", "alert-triangle")
     type_counts = fdf["violation_type"].value_counts()
     if not type_counts.empty:
-        bar_colors = [RED if "Hardhat" in k or "Vest" in k else AMBER for k in type_counts.index]
+        bar_colors = [RED if ("Hardhat" in k or "Vest" in k) else AMBER for k in type_counts.index]
         fig = go.Figure(go.Bar(
             x=type_counts.index.tolist(),
             y=type_counts.values.tolist(),
             marker_color=bar_colors,
+            marker_line_width=0,
         ))
         fig.update_layout(
-            height=220, margin=dict(l=5, r=5, t=5, b=30),
-            template="plotly_dark",
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(tickfont=dict(size=10, color="rgba(241,245,249,0.5)")),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            height=200, margin=dict(l=5, r=5, t=5, b=30),
             showlegend=False,
+            xaxis=dict(showgrid=False, tickfont=dict(size=10)),
+            yaxis=dict(showgrid=True),
+            **{k: v for k, v in layout_kw.items() if k not in ("xaxis", "yaxis")},
         )
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     else:
-        st.info("No data with current filters.")
+        st.info("No data matching current filters.")
 
 with mc2:
-    st.markdown('<div class="section-title">Violations Timeline</div>', unsafe_allow_html=True)
+    section_label("Incident timeline", "clock")
     if not fdf.empty and "timestamp" in fdf:
         tdf = fdf.set_index("timestamp").resample("1min")["violation_id"].count().reset_index()
         tdf.columns = ["time", "count"]
@@ -174,23 +195,24 @@ with mc2:
             x=tdf["time"], y=tdf["count"],
             mode="lines+markers",
             line=dict(color=ORANGE, width=2),
-            marker=dict(color=ORANGE, size=5),
-            fill="tozeroy", fillcolor="rgba(249,115,22,0.07)",
+            marker=dict(color=ORANGE, size=4),
+            fill="tozeroy", fillcolor="rgba(249,168,37,0.06)",
         ))
         fig.update_layout(
-            height=220, margin=dict(l=5, r=5, t=5, b=30),
-            template="plotly_dark",
-            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(tickfont=dict(size=9, color="rgba(241,245,249,0.4)"), tickangle=-20),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.05)"),
+            height=200, margin=dict(l=5, r=5, t=5, b=30),
             showlegend=False,
+            xaxis=dict(showgrid=False, tickfont=dict(size=9), tickangle=-20),
+            yaxis=dict(showgrid=True),
+            **{k: v for k, v in layout_kw.items() if k not in ("xaxis", "yaxis")},
         )
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
     else:
-        st.info("No timeline data.")
+        st.info("No timeline data available.")
+
+st.markdown('<div style="height:8px;"></div>', unsafe_allow_html=True)
 
 # ── Violation Table ────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">📋 Violation Records</div>', unsafe_allow_html=True)
+section_label("Recorded incidents", "database")
 
 cols_to_show = ["timestamp", "worker_id", "violation_type", "severity",
                 "confidence", "frame_number", "status"]
@@ -200,7 +222,7 @@ st.dataframe(fdf[available].sort_values("timestamp", ascending=False),
 
 # ── Download ──────────────────────────────────────────────────────────────────
 st.download_button(
-    "⬇️ Download Filtered Records (CSV)",
+    "Download filtered records (CSV)",
     data=fdf.to_csv(index=False),
     file_name=f"aegis_incidents_session{chosen['session_id']}.csv",
     mime="text/csv",
