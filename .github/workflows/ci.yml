@@ -107,7 +107,7 @@ jobs:
           import yaml
           import sys
           required_sections = ['model', 'compliance', 'database', 'video', 'alerts', 'evaluation']
-          with open('config.yaml') as f:
+          with open('configs/config.yaml') as f:
               cfg = yaml.safe_load(f)
           missing = [k for k in required_sections if k not in cfg]
           if missing:
