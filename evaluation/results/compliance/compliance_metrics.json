@@ -1,21 +1,43 @@
 {
-  "experiment": "PPE Compliance Decision Engine Evaluation",
-  "timestamp": "2026-08-15 19:03:05",
+  "experiment": "PPE Compliance Decision Engine Evaluation (Frame & Worker Level)",
+  "timestamp": "2026-08-15 19:57:37",
   "dataset_split": "D:\\safetyeye\\AI-Powered-Safety-At-Workplace-main\\infosys\\dataset\\css-data\\test",
-  "total_evaluated_frames": 82,
-  "confusion_matrix": {
-    "TP_correct_violations": 44,
-    "FP_false_alarms": 1,
-    "TN_correct_compliant": 33,
-    "FN_missed_hazards": 4
+  "frame_level_evaluation": {
+    "total_evaluated_frames": 82,
+    "confusion_matrix": {
+      "TP_correct_violations": 44,
+      "FP_false_alarms": 1,
+      "TN_correct_compliant": 33,
+      "FN_missed_hazards": 4
+    },
+    "metrics": {
+      "frame_violation_decision_accuracy": 0.939,
+      "frame_violation_precision": 0.9778,
+      "frame_violation_recall_sensitivity": 0.9167,
+      "frame_violation_specificity": 0.9706,
+      "frame_violation_f1_score": 0.9462,
+      "frame_false_positive_rate_fpr": 0.0294,
+      "frame_false_negative_rate_fnr": 0.0833
+    }
   },
-  "compliance_decision_metrics": {
-    "overall_compliance_accuracy": 0.939,
-    "violation_precision": 0.9778,
-    "violation_recall_sensitivity": 0.9167,
-    "violation_f1_score": 0.9462,
-    "false_positive_rate_fpr": 0.0294,
-    "false_negative_rate_miss_rate": 0.0833
+  "worker_level_evaluation": {
+    "total_ground_truth_workers": 174,
+    "total_predicted_workers": 160,
+    "confusion_matrix": {
+      "TP_correct_worker_violations": 94,
+      "FP_false_alarms_on_workers": 19,
+      "TN_correct_compliant_workers": 47,
+      "FN_missed_worker_hazards": 30
+    },
+    "metrics": {
+      "worker_compliance_decision_accuracy": 0.7421,
+      "worker_violation_precision": 0.8319,
+      "worker_violation_recall_sensitivity": 0.7581,
+      "worker_violation_specificity": 0.7121,
+      "worker_violation_f1_score": 0.7932,
+      "worker_false_positive_rate_fpr": 0.2879,
+      "worker_false_negative_rate_fnr": 0.2419
+    }
   },
   "per_violation_category_metrics": [
     {

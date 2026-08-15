@@ -1,0 +1,100 @@
+# ==============================================================================
+# AEGIS — Centralized System Configuration
+# Project: Real-Time PPE Detection and Compliance Monitoring System for Construction Safety
+# ==============================================================================
+
+system:
+  name: "AEGIS"
+  version: "2.1.0"
+  environment: "production"   # "development", "production", "research"
+  log_level: "INFO"
+  seed: 42
+
+# Model Inference Configuration
+model:
+  name: "yolov8_ppe"
+  version: "1.0.0"
+  path: "models/yolov8_ppe.pt"
+  architecture: "YOLOv8n-PPE"
+  input_resolution: [640, 640]
+  conf_threshold: 0.25
+  iou_threshold: 0.45
+  device: "cpu"                # "cpu" or "0" (CUDA GPU)
+  half_precision: false        # FP16 inference on GPU
+
+# Video Ingestion & Stream Processing
+video:
+  default_source: "Laptop Camera (Browser)"
+  supported_sources:
+    - "Laptop Camera (Browser)"
+    - "Sample Video"
+    - "Upload Video File"
+    - "Local Webcam (OpenCV)"
+  max_fps: 30
+  process_every_n_frames: 1    # Frame skipping (1 = process every frame)
+  max_resolution: [1280, 720]
+  auto_reconnect: true
+  reconnect_timeout_seconds: 5.0
+  buffer_size: 16
+
+# Person Tracking Configuration
+tracking:
+  enabled: true
+  max_disappeared_frames: 15
+  min_match_distance_px: 100
+  track_id_prefix: "WKR_"
+
+# Person-to-PPE Spatial Association
+association:
+  containment_threshold: 0.40  # Minimum percentage of PPE box inside Person box
+  center_distance_weight: 0.30
+  overlap_iou_weight: 0.70
+  head_region_fraction: 0.35   # Top 35% of Person bbox corresponds to Head (Hardhat/Mask)
+  torso_region_fraction: 0.65  # Middle 65% corresponds to Torso (Safety Vest)
+
+# PPE Compliance Rule Engine & Temporal Stability
+compliance:
+  required_ppe:
+    hardhat: true
+    safety_vest: true
+    mask: false                # Optional site-specific rule
+  temporal_confirmation:
+    violation_confirm_frames: 3 # Seen for N consecutive frames to confirm violation
+    resolution_confirm_frames: 5 # Absent for M frames to close event
+  event_cooldown_seconds: 15.0
+  severity_matrix:
+    "NO-Hardhat": "CRITICAL"
+    "NO-Safety Vest": "CRITICAL"
+    "NO-Mask": "HIGH"
+    "Unidentified Hazard": "MEDIUM"
+
+# Persistence & Database Configuration
+database:
+  url: "sqlite:///dashboard/aegis_safety.db"
+  pool_pre_ping: true
+  echo_sql: false
+  max_overflow: 10
+  snapshot_dir: "snapshots"
+  retention_days: 90
+  csv_fallback_path: "violations.csv"
+
+# Alert Routing & Event Dispatch
+alerts:
+  enabled: true
+  cooldown_seconds: 15.0
+  in_app_notifications: true
+  audio_alerts: false
+  webhook_enabled: false
+  webhook_url: ""
+
+# Research & Evaluation Suite Settings
+evaluation:
+  dataset_yaml: "infosys/dataset/css-data/data.yaml"
+  default_split: "test"
+  batch_size: 16
+  benchmark_frames: 100
+  resolutions_to_test:
+    - [640, 640]
+    - [480, 480]
+    - [320, 320]
+  results_dir: "evaluation/results"

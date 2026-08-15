@@ -171,6 +171,7 @@ def benchmark_realtime(
                 "median_e2e_latency_ms": round(float(np.median(latencies)), 2),
                 "std_e2e_latency_ms": round(float(np.std(latencies)), 2),
                 "p95_e2e_latency_ms": round(float(np.percentile(latencies, 95)), 2),
+                "p99_e2e_latency_ms": round(float(np.percentile(latencies, 99)), 2),
                 "min_e2e_latency_ms": round(float(np.min(latencies)), 2),
                 "max_e2e_latency_ms": round(float(np.max(latencies)), 2),
                 "mean_preprocess_ms": round(float(np.mean(preprocess_times)), 2),
@@ -210,6 +211,7 @@ def benchmark_realtime(
             "Std FPS": r["fps_metrics"]["std_fps"],
             "Mean Latency (ms)": r["latency_metrics_ms"]["mean_e2e_latency_ms"],
             "P95 Latency (ms)": r["latency_metrics_ms"]["p95_e2e_latency_ms"],
+            "P99 Latency (ms)": r["latency_metrics_ms"]["p99_e2e_latency_ms"],
             "Inference (ms)": r["latency_metrics_ms"]["mean_inference_ms"],
             "RAM (MB)": r["resource_utilization"]["process_ram_mb"],
         })

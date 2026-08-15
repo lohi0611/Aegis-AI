@@ -26,3 +26,12 @@ Thumbs.db
 # OS files
 .env
 .env.local
+
+# Test / Evaluation Artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+runs/
+*.sqlite
+*.db
+

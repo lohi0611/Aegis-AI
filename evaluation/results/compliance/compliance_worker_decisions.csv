@@ -1,0 +1,191 @@
+image,gt_worker_id,gt_status,pred_worker_id,pred_status,iou,decision_category
+-4405-_png_jpg.rf.82b5c10b2acd1cfaa24259ada8e599fe.jpg,GT_0,Violation,PRED_0,Violation,0.928,True Positive
+000005_jpg.rf.96e9379ccae638140c4a90fc4b700a2b.jpg,GT_0,Violation,PRED_0,Violation,0.714,True Positive
+000005_jpg.rf.96e9379ccae638140c4a90fc4b700a2b.jpg,GT_1,Violation,PRED_1,Violation,0.673,True Positive
+002551_jpg.rf.ce4b9f934161faa72c80dc6898d37b2d.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+002551_jpg.rf.ce4b9f934161faa72c80dc6898d37b2d.jpg,GT_1,Violation,PRED_0,Violation,0.758,True Positive
+002551_jpg.rf.ce4b9f934161faa72c80dc6898d37b2d.jpg,GT_2,Violation,PRED_1,Violation,0.709,True Positive
+002551_jpg.rf.ce4b9f934161faa72c80dc6898d37b2d.jpg,Unmatched,No Ground Truth Worker,PRED_2,Violation,0.0,False Positive (Spurious Worker Detection)
+003357_jpg.rf.9867f91e88089bb68dc95947d5116d14.jpg,GT_0,Violation,PRED_0,Violation,0.825,True Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_0,Violation,PRED_4,Violation,0.97,True Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_1,Compliant,PRED_1,Violation,0.868,False Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_2,Violation,PRED_5,Violation,0.951,True Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_3,Violation,PRED_2,Violation,0.917,True Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_4,Violation,PRED_0,Violation,0.95,True Positive
+004063_jpg.rf.1b7cdc4035bcb24ef69b8798b444053e.jpg,GT_5,Violation,PRED_3,Violation,0.913,True Positive
+004763_jpg.rf.46484e6ca73caeaa9de45822cf1085a9.jpg,GT_0,Violation,PRED_0,Violation,0.918,True Positive
+004763_jpg.rf.46484e6ca73caeaa9de45822cf1085a9.jpg,GT_1,Violation,PRED_1,Violation,0.858,True Positive
+004763_jpg.rf.46484e6ca73caeaa9de45822cf1085a9.jpg,GT_2,Violation,PRED_2,Violation,0.92,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_1,Violation,PRED_2,Violation,0.82,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_2,Violation,PRED_6,Violation,0.871,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_3,Violation,PRED_3,Violation,0.844,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_4,Violation,PRED_7,Violation,0.902,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_5,Violation,PRED_0,Violation,0.861,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_6,Violation,PRED_5,Violation,0.868,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_7,Violation,PRED_4,Violation,0.859,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_8,Violation,PRED_8,Violation,0.774,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_9,Violation,PRED_1,Violation,0.923,True Positive
+006463_jpg.rf.02f19082420ecc5537b9d59abbe6050c.jpg,GT_10,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_0,Compliant,PRED_2,Compliant,0.866,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_1,Compliant,PRED_6,Compliant,0.829,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_2,Compliant,PRED_0,Compliant,0.855,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_3,Compliant,PRED_1,Compliant,0.716,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_4,Compliant,PRED_4,Compliant,0.833,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,GT_5,Compliant,PRED_3,Compliant,0.877,True Negative
+006672_jpg.rf.87d5978c486feb53177408cf00a0d87f.jpg,Unmatched,No Ground Truth Worker,PRED_5,Violation,0.0,False Positive (Spurious Worker Detection)
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,GT_0,Violation,PRED_0,Violation,0.886,True Positive
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,GT_1,Compliant,PRED_3,Violation,0.561,False Positive
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,GT_2,Compliant,Unmatched,Not Detected,0.0,True Negative (Missed Person Detection)
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,GT_3,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,GT_4,Compliant,PRED_1,Violation,0.839,False Positive
+0_jpg.rf.2ff49f74309118f169e07aa12564df87.jpg,Unmatched,No Ground Truth Worker,PRED_2,Violation,0.0,False Positive (Spurious Worker Detection)
+2008_008320_jpg.rf.bd34011d46f82f9410d95f00e560b8ea.jpg,GT_0,Violation,PRED_1,Violation,0.672,True Positive
+2008_008320_jpg.rf.bd34011d46f82f9410d95f00e560b8ea.jpg,GT_1,Violation,PRED_0,Violation,0.709,True Positive
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,GT_0,Compliant,PRED_1,Violation,0.655,False Positive
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,GT_1,Compliant,PRED_0,Compliant,0.879,True Negative
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,GT_2,Violation,PRED_2,Violation,0.878,True Positive
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,GT_3,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,Unmatched,No Ground Truth Worker,PRED_3,Violation,0.0,False Positive (Spurious Worker Detection)
+2008_008519_jpg.rf.1798c8eed7de04399a0e7e297b4b4c9e.jpg,Unmatched,No Ground Truth Worker,PRED_4,Violation,0.0,False Positive (Spurious Worker Detection)
+2009_000059_jpg.rf.50e8398a37eb33f33fd9f662feeea083.jpg,GT_0,Violation,PRED_0,Violation,0.773,True Positive
+2009_000496_jpg.rf.9a2d210fe0f5ea4b572aeb07e41ecbae.jpg,GT_0,Violation,PRED_0,Violation,0.521,True Positive
+2009_000496_jpg.rf.9a2d210fe0f5ea4b572aeb07e41ecbae.jpg,GT_1,Violation,PRED_1,Violation,0.934,True Positive
+777_jpg.rf.92dc6945342410ced7ac93f3dfbff0c5.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+777_jpg.rf.92dc6945342410ced7ac93f3dfbff0c5.jpg,GT_1,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+777_jpg.rf.92dc6945342410ced7ac93f3dfbff0c5.jpg,Unmatched,No Ground Truth Worker,PRED_0,Violation,0.0,False Positive (Spurious Worker Detection)
+class1_150_jpg.rf.5995dce34d38deb9eb0b6e36cae78f17.jpg,GT_0,Violation,PRED_1,Violation,0.707,True Positive
+class1_150_jpg.rf.5995dce34d38deb9eb0b6e36cae78f17.jpg,GT_1,Violation,PRED_0,Violation,0.862,True Positive
+class2_131_jpg.rf.ad8314a9273471f1280ce8789ea75376.jpg,GT_0,Violation,PRED_0,Violation,0.898,True Positive
+class2_145_jpg.rf.b8ed5a5357ee41f8fb1aa9b01a400d51.jpg,GT_0,Violation,PRED_1,Violation,0.879,True Positive
+class2_145_jpg.rf.b8ed5a5357ee41f8fb1aa9b01a400d51.jpg,GT_1,Violation,PRED_0,Violation,0.961,True Positive
+construction-192-_jpg.rf.56dd5c4c1396c6ad01be4fbec3bca46f.jpg,GT_0,Violation,PRED_0,Violation,0.843,True Positive
+construction-675-_jpg.rf.bb4a05441be707256175e04929da3478.jpg,GT_0,Violation,PRED_0,Violation,0.806,True Positive
+construction-843-_jpg.rf.c0ca85a10f6ad3c1375b37e52a51eeed.jpg,Unmatched,No Ground Truth Worker,PRED_0,Violation,0.0,False Positive (Spurious Worker Detection)
+construction-843-_jpg.rf.c0ca85a10f6ad3c1375b37e52a51eeed.jpg,Unmatched,No Ground Truth Worker,PRED_1,Violation,0.0,False Positive (Spurious Worker Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_1,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_2,Violation,PRED_0,Violation,0.866,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_3,Compliant,Unmatched,Not Detected,0.0,True Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_4,Violation,PRED_1,Violation,0.778,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_5,Violation,PRED_3,Violation,0.897,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_6,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_7,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_8,Violation,PRED_7,Violation,0.55,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_9,Violation,PRED_9,Violation,0.805,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_10,Violation,PRED_15,Violation,0.635,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_11,Violation,PRED_5,Violation,0.757,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_12,Violation,PRED_8,Violation,0.567,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_13,Violation,PRED_4,Violation,0.749,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_14,Violation,PRED_2,Violation,0.723,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_15,Violation,PRED_10,Violation,0.536,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_16,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_17,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,GT_18,Violation,PRED_6,Violation,0.824,True Positive
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,Unmatched,No Ground Truth Worker,PRED_11,Violation,0.0,False Positive (Spurious Worker Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,Unmatched,No Ground Truth Worker,PRED_12,Violation,0.0,False Positive (Spurious Worker Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,Unmatched,No Ground Truth Worker,PRED_13,Violation,0.0,False Positive (Spurious Worker Detection)
+Image36_jpg.rf.8704f3450f736cdd01a61dcee588f2c2.jpg,Unmatched,No Ground Truth Worker,PRED_14,Violation,0.0,False Positive (Spurious Worker Detection)
+image_53_jpg.rf.3446e366b5d4d905a32e1aedc8fe87de.jpg,GT_0,Compliant,PRED_0,Compliant,0.935,True Negative
+image_55_jpg.rf.27ae4341a9b9647d73a8929ff7a22369.jpg,GT_0,Compliant,PRED_0,Compliant,0.913,True Negative
+IMG_0871_MOV-12_jpg.rf.36858a9d51613f9a39b7855b54dfa098.jpg,GT_0,Violation,PRED_0,Violation,0.925,True Positive
+IMG_0871_mp4-11_jpg.rf.432092b53ebeb84f4b9b27b40343c9aa.jpg,GT_0,Violation,PRED_0,Violation,0.913,True Positive
+IMG_0871_mp4-23_jpg.rf.03f872b1ed87ad7fadc85e09475ad37a.jpg,GT_0,Violation,PRED_0,Violation,0.946,True Positive
+IMG_3100_mp4-12_jpg.rf.58849ca6a931c2cfe1b17fb4206d9d82.jpg,GT_0,Violation,PRED_0,Violation,0.93,True Positive
+IMG_3100_mp4-9_jpg.rf.413ccf5fe4a7ee67f71e07c2c43b6756.jpg,GT_0,Violation,PRED_0,Violation,0.926,True Positive
+IMG_3103_mp4-9_jpg.rf.b31bd2d816465a27aa1eb072f90bb5aa.jpg,GT_0,Violation,PRED_0,Violation,0.873,True Positive
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_0,Compliant,PRED_12,Compliant,0.616,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_1,Compliant,PRED_2,Compliant,0.716,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_2,Compliant,PRED_10,Compliant,0.677,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_3,Compliant,PRED_11,Compliant,0.684,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_4,Violation,PRED_14,Compliant,0.62,False Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_5,Compliant,PRED_5,Compliant,0.74,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_6,Compliant,PRED_1,Compliant,0.838,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_7,Compliant,PRED_15,Compliant,0.872,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_8,Violation,PRED_19,Violation,0.788,True Positive
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_9,Compliant,PRED_0,Compliant,0.864,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_10,Compliant,PRED_6,Compliant,0.766,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_11,Compliant,PRED_18,Compliant,0.778,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_12,Compliant,PRED_13,Compliant,0.861,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_13,Compliant,PRED_4,Compliant,0.789,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_14,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_15,Compliant,PRED_9,Compliant,0.756,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_16,Compliant,PRED_16,Compliant,0.597,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_17,Compliant,PRED_8,Compliant,0.693,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_18,Compliant,PRED_7,Compliant,0.791,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_19,Compliant,PRED_17,Compliant,0.711,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,GT_20,Compliant,PRED_3,Compliant,0.709,True Negative
+IMG_5846_jpg.rf.0b9984069116e2acd928568eb7a8e214.jpg,Unmatched,No Ground Truth Worker,PRED_20,Violation,0.0,False Positive (Spurious Worker Detection)
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_0,Violation,PRED_1,Violation,0.707,True Positive
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_1,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_2,Violation,PRED_2,Violation,0.607,True Positive
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_3,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_4,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_5,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ka_01181_png_jpg.rf.154ee4ef254eabd62e316be50470c578.jpg,GT_6,Violation,PRED_0,Violation,0.712,True Positive
+maksssksksss17_png_jpg.rf.f685b497756b1facbf3d4c2d2d22c0d2.jpg,GT_0,Violation,PRED_0,Violation,0.765,True Positive
+Movie-on-10-31-22-at-10_08-AM_mov-20_jpg.rf.aea4278b41550cdb75df5891a26052e7.jpg,GT_0,Violation,PRED_0,Violation,0.959,True Positive
+Movie-on-10-31-22-at-10_08-AM_mov-24_jpg.rf.c50014f3510a484e5bd565460fd0fd5c.jpg,GT_0,Violation,PRED_0,Violation,0.926,True Positive
+NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg,GT_1,Violation,PRED_1,Violation,0.803,True Positive
+NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg,GT_2,Violation,PRED_0,Violation,0.777,True Positive
+NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg,GT_3,Violation,PRED_2,Violation,0.721,True Positive
+NX_img_177_jpg.rf.c03709e5fadfe2109411f05a9e9bc25f.jpg,GT_4,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ppe_0018_jpg.rf.be66fabcc8627f60d963454b5a227095.jpg,GT_0,Violation,PRED_0,Violation,0.835,True Positive
+ppe_0018_jpg.rf.be66fabcc8627f60d963454b5a227095.jpg,GT_1,Violation,PRED_1,Violation,0.72,True Positive
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_1,Compliant,PRED_1,Compliant,0.616,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_2,Compliant,PRED_2,Compliant,0.704,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_3,Compliant,Unmatched,Not Detected,0.0,True Negative (Missed Person Detection)
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_4,Compliant,PRED_0,Compliant,0.761,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_5,Violation,PRED_6,Compliant,0.766,False Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_6,Violation,PRED_8,Violation,0.584,True Positive
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_7,Compliant,PRED_3,Compliant,0.776,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_8,Compliant,PRED_7,Compliant,0.623,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_9,Compliant,PRED_4,Compliant,0.823,True Negative
+ppe_1073_jpg.rf.72ea8a293a4f3e1135219e33701b1099.jpg,GT_10,Compliant,PRED_5,Compliant,0.733,True Negative
+RPReplay_Final1667001201_MP4-100_jpg.rf.9a1b50c4301c53b3ae534c6353337df9.jpg,GT_0,Violation,PRED_0,Violation,0.918,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_1,Violation,PRED_2,Violation,0.838,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_2,Violation,PRED_4,Violation,0.795,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_3,Violation,PRED_6,Violation,0.805,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_4,Violation,PRED_1,Violation,0.706,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_5,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_6,Violation,PRED_7,Violation,0.658,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_7,Violation,PRED_0,Violation,0.83,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_8,Violation,PRED_5,Violation,0.855,True Positive
+thumbnail-ba5c72edb320b49a69e86b05775c49b2-scaled-1_jpeg_jpg.rf.3bb460e284098219861b894fb0db13d5.jpg,GT_9,Violation,PRED_3,Violation,0.755,True Positive
+youtube-108_jpg.rf.9dc7ed5f816f07d520f3dbfaad08d40f.jpg,GT_0,Compliant,PRED_0,Compliant,0.912,True Negative
+youtube-108_jpg.rf.9dc7ed5f816f07d520f3dbfaad08d40f.jpg,GT_1,Compliant,PRED_1,Compliant,0.824,True Negative
+youtube-114_jpg.rf.5e02b6574ace1f4b3689befbc5051cd0.jpg,GT_0,Violation,PRED_0,Violation,0.829,True Positive
+youtube-126_jpg.rf.786824e90daf3276130ca73ca610a8da.jpg,GT_0,Violation,PRED_1,Violation,0.673,True Positive
+youtube-126_jpg.rf.786824e90daf3276130ca73ca610a8da.jpg,GT_1,Violation,PRED_0,Violation,0.952,True Positive
+youtube-126_jpg.rf.786824e90daf3276130ca73ca610a8da.jpg,Unmatched,No Ground Truth Worker,PRED_2,Violation,0.0,False Positive (Spurious Worker Detection)
+youtube-152_jpg.rf.9147878e3ddda845e58f7d9c041f1338.jpg,GT_0,Violation,PRED_0,Violation,0.832,True Positive
+youtube-152_jpg.rf.9147878e3ddda845e58f7d9c041f1338.jpg,GT_1,Violation,PRED_3,Violation,0.626,True Positive
+youtube-152_jpg.rf.9147878e3ddda845e58f7d9c041f1338.jpg,GT_2,Violation,PRED_1,Violation,0.565,True Positive
+youtube-152_jpg.rf.9147878e3ddda845e58f7d9c041f1338.jpg,GT_3,Violation,PRED_4,Violation,0.599,True Positive
+youtube-152_jpg.rf.9147878e3ddda845e58f7d9c041f1338.jpg,GT_4,Violation,PRED_2,Violation,0.565,True Positive
+youtube-186_jpg.rf.1f1d93447d4be3233c22c4ce9f6e0601.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+youtube-186_jpg.rf.1f1d93447d4be3233c22c4ce9f6e0601.jpg,GT_1,Compliant,PRED_0,Compliant,0.879,True Negative
+youtube-192_jpg.rf.93bea040de8cd55f34ffb12f6ffe30b1.jpg,GT_0,Violation,PRED_0,Violation,0.929,True Positive
+youtube-198_jpg.rf.e89faeb9765c6bd6cece5434d140f4af.jpg,GT_0,Compliant,PRED_0,Compliant,0.856,True Negative
+youtube-213_jpg.rf.da70b1d8cefd3cc9d56e43bb88dfb67d.jpg,Unmatched,No Ground Truth Worker,PRED_0,Compliant,0.0,True Negative (Spurious Worker Detection)
+youtube-237_jpg.rf.d07a927721fe259757237c3706ea22e5.jpg,GT_0,Violation,PRED_0,Violation,0.838,True Positive
+youtube-237_jpg.rf.d07a927721fe259757237c3706ea22e5.jpg,GT_1,Violation,PRED_1,Violation,0.946,True Positive
+youtube-263_jpg.rf.374e343e12ead395440dbd81417e1be9.jpg,GT_0,Violation,PRED_0,Violation,0.801,True Positive
+youtube-263_jpg.rf.374e343e12ead395440dbd81417e1be9.jpg,Unmatched,No Ground Truth Worker,PRED_1,Violation,0.0,False Positive (Spurious Worker Detection)
+youtube-263_jpg.rf.bb17b89dd2ec9a090ce53b728f48865e.jpg,GT_0,Violation,PRED_0,Violation,0.874,True Positive
+youtube-34_jpg.rf.03eacc444bae3c5caa3fef5c736c3e40.jpg,GT_0,Violation,PRED_0,Violation,0.583,True Positive
+youtube-388_jpg.rf.18caa1da4f818a65f73e48463cb2270e.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+youtube-462_jpg.rf.df73aa5089a04b8fbf3adf9d614a6740.jpg,GT_0,Compliant,PRED_0,Compliant,0.806,True Negative
+youtube-462_jpg.rf.df73aa5089a04b8fbf3adf9d614a6740.jpg,GT_1,Compliant,PRED_1,Compliant,0.81,True Negative
+youtube-471_jpg.rf.4296b7bd9a5a07753077beddbcd651bf.jpg,GT_0,Violation,PRED_0,Compliant,0.626,False Negative
+youtube-472_jpg.rf.e9425ff40c0df2beeef70abbc2324956.jpg,GT_0,Violation,PRED_0,Violation,0.931,True Positive
+youtube-510_jpg.rf.62f82e36d134d53587edb48f291986f4.jpg,GT_0,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+youtube-53_jpg.rf.e96f8f81389f4e63a79663095680a617.jpg,GT_0,Violation,PRED_0,Violation,0.809,True Positive
+youtube-53_jpg.rf.e96f8f81389f4e63a79663095680a617.jpg,GT_1,Violation,Unmatched,Not Detected,0.0,False Negative (Missed Person Detection)
+youtube-596_jpg.rf.11a8a4ac01d8aadb80eeb0406dfa579a.jpg,GT_0,Violation,PRED_0,Violation,0.979,True Positive
+youtube-631_jpg.rf.7c6ecf859c1b0a659f8ea057ad27aebd.jpg,GT_0,Compliant,PRED_0,Compliant,0.877,True Negative
+youtube-738_jpg.rf.6f300b76e12b325f7c373c95ef319005.jpg,GT_0,Compliant,PRED_0,Compliant,0.861,True Negative
+youtube-840_jpg.rf.974a83a7c5aee7c16e83435b043c6d96.jpg,GT_0,Compliant,PRED_0,Compliant,0.883,True Negative

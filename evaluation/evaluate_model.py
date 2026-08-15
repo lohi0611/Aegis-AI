@@ -152,7 +152,7 @@ def evaluate_model(
             "recall": round(mr, 4),
             "f1_score": round(f1_score, 4),
             "mAP50": round(map50, 4),
-            "mAP50_95": round(map50_95_val if 'map50_95_val' in locals() else map50_95, 4),
+            "mAP50_95": round(map50_95, 4),
             "speed_inference_ms": round(val_results.speed.get("inference", 0.0), 2),
             "speed_preprocess_ms": round(val_results.speed.get("preprocess", 0.0), 2),
             "speed_loss_ms": round(val_results.speed.get("loss", 0.0), 2),
@@ -162,6 +162,13 @@ def evaluate_model(
         "per_class_metrics": per_class_data,
         "generated_artifacts": copied_plots,
     }
+
+    # Automated consistency verification
+    assert 0.0 <= mp <= 1.0, f"Precision out of bounds: {mp}"
+    assert 0.0 <= mr <= 1.0, f"Recall out of bounds: {mr}"
+    assert 0.0 <= map50 <= 1.0, f"mAP@50 out of bounds: {map50}"
+    assert 0.0 <= map50_95 <= 1.0, f"mAP@50-95 out of bounds: {map50_95}"
+    assert len(per_class_data) == num_classes, f"Mismatch in per-class metrics count: {len(per_class_data)} vs {num_classes}"
 
     # Save outputs
     save_json_report(summary_report, out_path / "metrics.json")
