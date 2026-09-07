@@ -1,0 +1,11 @@
+opencv-python-headless
+streamlit>=1.30.0
+numpy
+pandas
+plotly
+ultralytics>=8.0.0
+torch
+torchvision
+SQLAlchemy>=2.0.0
+gdown
+pytest

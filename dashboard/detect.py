@@ -1,6 +1,6 @@
 import os
-import cv2
 from ultralytics import YOLO
+
 
 class PPEDetector:
     def __init__(self, model_path=None, conf=0.5):

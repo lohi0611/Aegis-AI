@@ -41,7 +41,15 @@ from ui_utils import (
     get_plotly_layout_defaults, ICONS,
     ORANGE, RED, GREEN, TEAL, AMBER, BLUE,
 )
-from detect import PPEDetector
+# ── Safe detector import ──────────────────────────────────────────────────────
+try:
+    from detect import PPEDetector
+    DETECT_OK = True
+except Exception as _det_err:
+    DETECT_OK = False
+    PPEDetector = None
+    print(f"[AEGIS] Detection module failed to load at startup: {_det_err}")
+
 from db import (
     DB_AVAILABLE, create_scan_session, close_scan_session,
     log_violation_db, get_session_violations,
@@ -50,9 +58,17 @@ from db import (
 
 # ── Cached model loader (runs once per session, not on every rerun) ───────────
 @st.cache_resource(show_spinner="⛑ Loading AEGIS detection model…")
-def _load_detector(conf: float) -> "PPEDetector":
+def _load_detector(conf: float):
     """Load YOLOv8 model once and cache it. Re-instantiates only if conf changes."""
+    global PPEDetector, DETECT_OK
+    if not DETECT_OK or PPEDetector is None:
+        try:
+            from detect import PPEDetector
+            DETECT_OK = True
+        except Exception as _e:
+            raise RuntimeError(f"Could not load PPEDetector: {_e}")
     return PPEDetector(conf=conf)
+
 
 
 # ── Severity helper ───────────────────────────────────────────────────────────
