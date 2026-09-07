@@ -249,7 +249,9 @@ with st.sidebar:
     sources = ["Laptop Camera (Browser)"]
     if sample_video:
         sources.append("Sample Video")
-    sources += ["Upload Video File", "Local Webcam (OpenCV)"]
+    sources.append("Upload Video File")
+    if not _IS_CLOUD:                          # no /dev/video0 on Streamlit Cloud
+        sources.append("Local Webcam (OpenCV)")
     video_source = st.selectbox("Video source", sources, label_visibility="collapsed")
 
     uploaded_file = None
@@ -643,7 +645,8 @@ if video_source == "Laptop Camera (Browser)":
                      "Please check the deployment logs and requirements.txt.")
             st.session_state.running = False
             st.stop()
-        detector = _load_detector(confidence_slider)
+        with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
+            detector = _load_detector(confidence_slider)
         with cam_badge_ph:
             val = auto_camera(key="auto_camera_key")
 
@@ -724,6 +727,10 @@ elif st.session_state.running:
         st.session_state.running = False
         st.stop()
     detector = _load_detector(confidence_slider)
+    if not st.session_state.get("_model_warm"):
+        with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
+            detector = _load_detector(confidence_slider)
+        st.session_state["_model_warm"] = True
 
     # Resolve capture source
     cap_src = None
