@@ -450,9 +450,11 @@ with c_logs:
 #  SHARED VIOLATION LOGGING HELPER
 # ─────────────────────────────────────────────────────────────────────────────
 def _save_snapshot_bg(frame_bgr: np.ndarray, snap_abs: str):
-    """Write snapshot JPEG in a background thread so the camera loop is never blocked."""
+    """Write snapshot JPEG at high quality in a background thread.
+    Expects a BGR numpy array (as returned by YOLO .plot()).
+    """
     try:
-        cv2.imwrite(snap_abs, frame_bgr)
+        cv2.imwrite(snap_abs, frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
     except Exception:
         pass
 
@@ -483,8 +485,9 @@ def log_violation(tracker, w_id, d, frame_number, annotated_frame):
     snap_id  = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
     snap_abs = os.path.join(SNAP_DIR, snap_id)   # absolute path used everywhere
     try:
-        frame_bgr = cv2.cvtColor(annotated_frame, cv2.COLOR_RGB2BGR)
-        t = threading.Thread(target=_save_snapshot_bg, args=(frame_bgr, snap_abs), daemon=True)
+        # YOLO .plot() always returns BGR — save directly, no conversion needed.
+        # The previous cv2.COLOR_RGB2BGR on a BGR frame was causing greyscale output.
+        t = threading.Thread(target=_save_snapshot_bg, args=(annotated_frame, snap_abs), daemon=True)
         t.start()
     except Exception:
         snap_abs = ""

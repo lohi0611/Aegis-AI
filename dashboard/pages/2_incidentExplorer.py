@@ -271,9 +271,23 @@ if "snapshot_path" in fdf.columns:
                         ts_label = str(snap_row["timestamp"])[:19] if snap_row["timestamp"] is not None else ""
                         worker_label = snap_row.get("worker_id", "")
                         v_type = snap_row.get("violation_type", "")
-                        st.image(str(snap_path),
-                                 caption=f"{worker_label} — {v_type}\n{ts_label}",
-                                 use_container_width=True)
+                        try:
+                            import cv2 as _cv2
+                            import numpy as _np
+                            _img_bgr = _cv2.imread(str(snap_path))
+                            if _img_bgr is not None:
+                                _img_rgb = _cv2.cvtColor(_img_bgr, _cv2.COLOR_BGR2RGB)
+                                st.image(_img_rgb,
+                                         caption=f"{worker_label} — {v_type}\n{ts_label}",
+                                         use_container_width=True)
+                            else:
+                                st.image(str(snap_path),
+                                         caption=f"{worker_label} — {v_type}\n{ts_label}",
+                                         use_container_width=True)
+                        except Exception:
+                            st.image(str(snap_path),
+                                     caption=f"{worker_label} — {v_type}\n{ts_label}",
+                                     use_container_width=True)
                     else:
                         st.markdown(
                             '<div style="height:100px;display:flex;align-items:center;'
