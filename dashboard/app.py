@@ -38,7 +38,7 @@ from ui_utils import (
     draw_violation_feed_card, draw_site_status, draw_system_status,
     navigation_tip, standby_placeholder, scan_complete_placeholder,
     mission_control_header, render_theme_toggle, section_label,
-    get_plotly_layout_defaults, ICONS,
+    get_plotly_layout_defaults, ICONS, render_cctv_hud_header,
     ORANGE, RED, GREEN, TEAL, AMBER, BLUE,
 )
 # ── Safe detector import ──────────────────────────────────────────────────────
@@ -433,6 +433,7 @@ col_left, col_right = st.columns([2.2, 1.0])
 
 with col_left:
     section_label("Live safety monitor", "camera")
+    cctv_header_ph = st.empty()
     video_ph = st.empty()
     cam_badge_ph = st.empty()
 
@@ -440,15 +441,16 @@ with col_right:
     section_label("Site condition", "shield")
     status_ph = st.empty()
 
-    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
     section_label("System status", "cpu")
     sys_status_ph = st.empty()
     with sys_status_ph:
         draw_system_status(DB_AVAILABLE, st.session_state.running)
 
-    st.markdown('<div style="height:10px;"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:6px;"></div>', unsafe_allow_html=True)
     section_label("Violation feed", "alert-triangle")
-    feed_ph = st.container()
+    feed_ph = st.container(height=360)
+
 
 
 # ── Bottom analytics row ──────────────────────────────────────────────────────
@@ -574,7 +576,10 @@ def _perf_chart(fps_history, time_history, key: str = "fps"):
 
 
 def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
-    """Refresh video, KPIs, perf chart, feed and log table."""
+    """Refresh video, CCTV HUD, KPIs, perf chart, feed and log table."""
+    with cctv_header_ph:
+        render_cctv_hud_header(source_name=video_source, is_live=True, fps_val=fps)
+
     video_ph.image(annotated, use_container_width=True)
 
     breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
@@ -594,11 +599,10 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
         key="fps_chart_live",
     )
 
-
     # Violation feed
     with feed_ph:
         if st.session_state.session_rows:
-            recent = st.session_state.session_rows[-5:]
+            recent = st.session_state.session_rows[-10:]
             for r in reversed(recent):
                 draw_violation_feed_card(
                     timestamp=r[0].split(" ")[1],
@@ -608,6 +612,7 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
                     severity=severity_for(r[2]),
                     status=r[9],
                 )
+
         else:
             st.markdown("""
 <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.78rem;">
@@ -885,8 +890,11 @@ else:
             elapsed = time.time() - st.session_state.scan_start_time
         dur_str = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}"
 
+        with cctv_header_ph:
+            render_cctv_hud_header(source_name=video_source, is_live=False, fps_val=0.0)
         with video_ph:
             scan_complete_placeholder(breaches, frames, dur_str)
+
 
         render_kpis(breaches, critical, frames,
                     (sum(st.session_state.fps_history) / len(st.session_state.fps_history)
@@ -938,8 +946,11 @@ else:
     else:
         # ── Initial standby ────────────────────────────────────────────────
         render_kpis(0, 0, 0, 0, 100.0, "00:00")
+        with cctv_header_ph:
+            render_cctv_hud_header(source_name=video_source, is_live=False, fps_val=0.0)
         with video_ph:
             standby_placeholder(DB_AVAILABLE)
         with status_ph:
             draw_site_status(0, 0)
         draw_empty_perf()
+

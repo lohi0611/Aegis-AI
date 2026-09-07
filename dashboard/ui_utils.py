@@ -6,14 +6,14 @@ Dark-first design with light theme support via CSS custom properties.
 import streamlit as st
 
 # ── Python colour tokens (for Plotly / Python-side logic only) ────────────────
-ORANGE = "#F9A825"   # Safety yellow-amber — primary accent
-RED    = "#D32F2F"   # Hazard red
-GREEN  = "#2E7D32"   # Safe green (deeper, more industrial)
-TEAL   = "#00838F"   # Cyan/teal — technical metrics
-BLUE   = "#1565C0"   # Blue — info
-AMBER  = "#F57F17"   # Amber
+ORANGE = "#F59E0B"   # Industrial safety amber — authoritative primary accent
+RED    = "#EF4444"   # Safety hazard red (clean modern coral)
+GREEN  = "#10B981"   # Compliance green (emerald)
+TEAL   = "#06B6D4"   # Cyan/teal — technical telemetry
+BLUE   = "#3B82F6"   # Technical blue — info
+AMBER  = "#F59E0B"   # Amber
 
-# ── SVG icon library (no emojis) ──────────────────────────────────────────────
+# ── SVG icon library (clean Lucide-style vectors) ──────────────────────────────
 ICONS = {
     "shield": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>""",
     "hardhat": """<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20"/><path d="M12 3C8 3 4 7 4 12h16c0-5-4-9-8-9z"/><path d="M4 12v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>""",
@@ -28,59 +28,56 @@ ICONS = {
     "x-circle": """<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>""",
     "sun": """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>""",
     "moon": """<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>""",
-    "wifi": """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 6 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>""",
     "cpu": """<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>""",
-    "play": """<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>""",
-    "square": """<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>""",
 }
 
 # ── Theme definitions ─────────────────────────────────────────────────────────
 THEMES = {
     "dark": {
-        "--bg-base":          "#0B0F14",
-        "--bg-sidebar":       "#111720",
-        "--bg-card":          "#151B24",
-        "--bg-card-2":        "#18202A",
-        "--bg-card-3":        "#1B2430",
+        "--bg-base":          "#080C12",
+        "--bg-sidebar":       "#0D121B",
+        "--bg-card":          "rgba(16, 22, 33, 0.82)",
+        "--bg-card-2":        "rgba(20, 28, 42, 0.88)",
+        "--bg-card-3":        "#182232",
         "--bg-input":         "rgba(255,255,255,0.04)",
         "--border-subtle":    "rgba(255,255,255,0.07)",
         "--border-medium":    "rgba(255,255,255,0.12)",
-        "--border-accent":    "rgba(249,168,37,0.25)",
-        "--text-primary":     "#E8EDF2",
-        "--text-secondary":   "rgba(232,237,242,0.55)",
-        "--text-muted":       "rgba(232,237,242,0.30)",
-        "--shadow-card":      "0 1px 3px rgba(0,0,0,0.4), 0 4px 16px rgba(0,0,0,0.3)",
-        "--shadow-elevated":  "0 4px 24px rgba(0,0,0,0.5)",
-        "--accent-primary":   "#F9A825",
-        "--accent-glow":      "rgba(249,168,37,0.12)",
+        "--border-accent":    "rgba(245,158,11,0.30)",
+        "--text-primary":     "#F1F5F9",
+        "--text-secondary":   "rgba(241,245,249,0.65)",
+        "--text-muted":       "rgba(241,245,249,0.35)",
+        "--shadow-card":      "0 2px 8px rgba(0,0,0,0.35), 0 12px 32px rgba(0,0,0,0.25)",
+        "--shadow-elevated":  "0 8px 36px rgba(0,0,0,0.60)",
+        "--accent-primary":   "#F59E0B",
+        "--accent-glow":      "rgba(245,158,11,0.14)",
         "--plotly-template":  "plotly_dark",
         "--plotly-paper":     "rgba(0,0,0,0)",
         "--plotly-bg":        "rgba(0,0,0,0)",
-        "--plotly-grid":      "rgba(255,255,255,0.05)",
-        "--plotly-text":      "rgba(232,237,242,0.4)",
+        "--plotly-grid":      "rgba(255,255,255,0.04)",
+        "--plotly-text":      "rgba(241,245,249,0.45)",
     },
     "light": {
-        "--bg-base":          "#F0F4F8",
-        "--bg-sidebar":       "#1B2A3B",
+        "--bg-base":          "#F1F5F9",
+        "--bg-sidebar":       "#0F172A",
         "--bg-card":          "#FFFFFF",
         "--bg-card-2":        "#F8FAFC",
         "--bg-card-3":        "#F1F5F9",
         "--bg-input":         "rgba(0,0,0,0.03)",
-        "--border-subtle":    "rgba(0,0,0,0.07)",
-        "--border-medium":    "rgba(0,0,0,0.12)",
-        "--border-accent":    "rgba(249,168,37,0.35)",
+        "--border-subtle":    "rgba(0,0,0,0.08)",
+        "--border-medium":    "rgba(0,0,0,0.14)",
+        "--border-accent":    "rgba(245,158,11,0.40)",
         "--text-primary":     "#0F172A",
-        "--text-secondary":   "rgba(15,23,42,0.55)",
-        "--text-muted":       "rgba(15,23,42,0.35)",
-        "--shadow-card":      "0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06)",
-        "--shadow-elevated":  "0 4px 24px rgba(0,0,0,0.12)",
-        "--accent-primary":   "#E65100",
-        "--accent-glow":      "rgba(230,81,0,0.08)",
+        "--text-secondary":   "rgba(15,23,42,0.65)",
+        "--text-muted":       "rgba(15,23,42,0.40)",
+        "--shadow-card":      "0 2px 6px rgba(0,0,0,0.06), 0 12px 28px rgba(0,0,0,0.04)",
+        "--shadow-elevated":  "0 8px 30px rgba(0,0,0,0.12)",
+        "--accent-primary":   "#D97706",
+        "--accent-glow":      "rgba(217,119,6,0.10)",
         "--plotly-template":  "plotly_white",
         "--plotly-paper":     "rgba(0,0,0,0)",
         "--plotly-bg":        "rgba(0,0,0,0)",
         "--plotly-grid":      "rgba(0,0,0,0.06)",
-        "--plotly-text":      "rgba(15,23,42,0.45)",
+        "--plotly-text":      "rgba(15,23,42,0.50)",
     },
 }
 
@@ -107,12 +104,12 @@ def apply_custom_css():
     --teal:         {TEAL};
     --amber:        {AMBER};
     --r:            10px;
-    --r-sm:         7px;
+    --r-sm:         6px;
     --r-lg:         14px;
-    --t:            0.18s ease;
+    --t:            0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }}
 
-/* ── GLOBAL ─────────────────────────────────────────────────── */
+/* ── GLOBAL STYLES & FONT STABILITY ────────────────────────── */
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"],
@@ -121,83 +118,90 @@ html, body,
     background: var(--bg-base) !important;
     color: var(--text-primary) !important;
     -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }}
 
-/* Subtle radial ambient for dark mode only */
-{"[data-testid='stAppViewContainer']::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 80% 60% at 10% 0%, rgba(249,168,37,0.05) 0%, transparent 60%), radial-gradient(ellipse 50% 40% at 90% 100%, rgba(0,131,143,0.04) 0%, transparent 55%); pointer-events:none; z-index:0; }" if theme == "dark" else ""}
+/* Crisp numbers that never jitter when updating */
+.kpi-value, .kpi-value-sm, .tabular, [data-testid="stMetricValue"] {{
+    font-variant-numeric: tabular-nums !important;
+}}
 
 code, pre {{ font-family: 'JetBrains Mono', 'Fira Code', monospace !important; }}
 
-/* ── HIDE DEFAULT STREAMLIT CLUTTER ─────────────────────────── */
-#MainMenu, footer, [data-testid="stDeployButton"] {{ display: none !important; }}
-[data-testid="stHeader"] {{ background: transparent !important; height: 0 !important; min-height: 0 !important; }}
-[data-testid="collapsedControl"] {{ top: 12px !important; }}
+/* ── KILL AMATEUR STREAMLIT CHROME ──────────────────────────── */
+#MainMenu, footer, [data-testid="stDeployButton"],
+header[data-testid="stHeader"] {{
+    display: none !important;
+    height: 0 !important;
+}}
+/* Kill ugly heading anchor hover links */
+a.header-anchor, a.anchorjs-link {{
+    display: none !important;
+}}
 .block-container {{
-    padding: 1.25rem 2rem 2rem !important;
-    max-width: 1440px !important;
+    padding: 1.25rem 2rem 2.5rem !important;
+    max-width: 1480px !important;
 }}
 
-/* ── SIDEBAR ─────────────────────────────────────────────────── */
+/* ── SLEEK INDUSTRIAL SCROLLBAR ────────────────────────────── */
+::-webkit-scrollbar {{ width: 5px; height: 5px; }}
+::-webkit-scrollbar-track {{ background: transparent; }}
+::-webkit-scrollbar-thumb {{
+    background: rgba(255,255,255,0.12);
+    border-radius: 4px;
+}}
+::-webkit-scrollbar-thumb:hover {{
+    background: var(--accent-primary);
+}}
+
+/* ── SIDEBAR ELEVATION ──────────────────────────────────────── */
 section[data-testid="stSidebar"] {{
     background: var(--bg-sidebar) !important;
-    border-right: 1px solid rgba(249,168,37,0.1) !important;
-    min-width: 260px !important;
-    max-width: 280px !important;
+    border-right: 1px solid var(--border-subtle) !important;
+    min-width: 270px !important;
+    max-width: 290px !important;
 }}
 section[data-testid="stSidebar"] > div {{ padding: 0 !important; }}
 section[data-testid="stSidebar"] label {{
-    color: rgba(232,237,242,0.65) !important;
+    color: rgba(241,245,249,0.7) !important;
     font-size: 0.8rem !important;
     font-weight: 500 !important;
 }}
-section[data-testid="stSidebar"] p {{ color: rgba(232,237,242,0.55) !important; }}
-
-/* Sidebar section headings */
-section[data-testid="stSidebar"] .stMarkdown h3 {{
-    color: rgba(249,168,37,0.8) !important;
-    font-size: 0.65rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 1.8px !important;
-    text-transform: uppercase !important;
-    margin: 20px 0 8px !important;
-    padding-bottom: 4px !important;
-    border-bottom: 1px solid rgba(249,168,37,0.12) !important;
-}}
+section[data-testid="stSidebar"] p {{ color: rgba(241,245,249,0.55) !important; }}
 
 /* ── BUTTONS ─────────────────────────────────────────────────── */
-/* Primary / start scan */
 .stButton > button {{
-    background: #F9A825 !important;
-    border: none !important;
-    color: #0B0F14 !important;
+    background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: #090D13 !important;
     border-radius: var(--r-sm) !important;
     font-weight: 700 !important;
     font-size: 0.82rem !important;
-    letter-spacing: 0.3px !important;
-    padding: 10px 20px !important;
+    letter-spacing: 0.4px !important;
+    padding: 10px 18px !important;
     transition: all var(--t) !important;
-    box-shadow: 0 2px 12px rgba(249,168,37,0.25) !important;
+    box-shadow: 0 2px 10px rgba(245,158,11,0.25) !important;
     width: 100% !important;
 }}
 .stButton > button:hover {{
-    background: #FFB300 !important;
-    box-shadow: 0 4px 20px rgba(249,168,37,0.4) !important;
+    background: linear-gradient(180deg, #FBBF24 0%, #F59E0B 100%) !important;
+    box-shadow: 0 4px 18px rgba(245,158,11,0.40) !important;
     transform: translateY(-1px) !important;
 }}
-.stButton > button:active {{ transform: translateY(0) !important; box-shadow: none !important; }}
+.stButton > button:active {{ transform: translateY(0) !important; }}
 
-/* Stop scan variant */
+/* Stop scan button */
 .stop-btn .stButton > button {{
-    background: rgba(211,47,47,0.1) !important;
-    border: 1px solid rgba(211,47,47,0.3) !important;
-    color: #EF9A9A !important;
+    background: rgba(239,68,68,0.12) !important;
+    border: 1px solid rgba(239,68,68,0.35) !important;
+    color: #F87171 !important;
     box-shadow: none !important;
     font-weight: 600 !important;
 }}
 .stop-btn .stButton > button:hover {{
-    background: rgba(211,47,47,0.2) !important;
-    box-shadow: 0 4px 16px rgba(211,47,47,0.25) !important;
-    transform: translateY(-1px) !important;
+    background: rgba(239,68,68,0.22) !important;
+    box-shadow: 0 4px 16px rgba(239,68,68,0.30) !important;
+    color: #FECACA !important;
 }}
 
 /* Icon-only theme toggle */
@@ -280,16 +284,20 @@ div[data-baseweb="select"] > div:focus-within {{
 }}
 
 /* ── KPI CARDS ───────────────────────────────────────────────── */
+/* ── KPI CARDS (STABILIZED HEIGHT) ─────────────────────────── */
 .kpi-card {{
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--r);
-    padding: 16px 18px 18px;
+    padding: 14px 16px 16px;
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-card);
     transition: transform var(--t), box-shadow var(--t), border-color var(--t);
-    height: 100%;
+    min-height: 104px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }}
 .kpi-card:hover {{
     transform: translateY(-2px);
@@ -300,159 +308,187 @@ div[data-baseweb="select"] > div:focus-within {{
 .kpi-card::before {{
     content: '';
     position: absolute;
-    top: 16px; bottom: 16px; left: 0;
-    width: 3px;
+    top: 12px; bottom: 12px; left: 0;
+    width: 3.5px;
     border-radius: 0 2px 2px 0;
 }}
-.kpi-yellow::before  {{ background: #F9A825; }}
-.kpi-red::before     {{ background: #D32F2F; }}
-.kpi-green::before   {{ background: #2E7D32; }}
-.kpi-teal::before    {{ background: #00838F; }}
-.kpi-blue::before    {{ background: #1565C0; }}
-.kpi-orange::before  {{ background: #E65100; }}
+.kpi-yellow::before  {{ background: #F59E0B; }}
+.kpi-red::before     {{ background: #EF4444; }}
+.kpi-green::before   {{ background: #10B981; }}
+.kpi-teal::before    {{ background: #06B6D4; }}
+.kpi-blue::before    {{ background: #3B82F6; }}
+.kpi-orange::before  {{ background: #F59E0B; }}
 
 .kpi-header {{
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     gap: 8px;
 }}
 .kpi-label {{
-    font-size: 0.72rem;
-    font-weight: 600;
+    font-size: 0.68rem;
+    font-weight: 700;
     color: var(--text-secondary);
-    line-height: 1.3;
-    letter-spacing: 0.1px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    line-height: 1.2;
 }}
 .kpi-icon {{
     color: var(--text-muted);
     flex-shrink: 0;
-    margin-top: 1px;
+    display: flex;
+    align-items: center;
 }}
 .kpi-value {{
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-size: 1.7rem;
+    font-weight: 800;
     color: var(--text-primary);
     line-height: 1;
     letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
 }}
 .kpi-value-sm {{
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.2;
+    font-variant-numeric: tabular-nums;
     word-break: break-word;
 }}
 .kpi-sub {{
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--text-muted);
     margin-top: 4px;
 }}
 
-/* ── AEGIS CARD ─────────────────────────────────────────────── */
-.aegis-card {{
-    background: var(--bg-card);
-    border: 1px solid var(--border-subtle);
+/* ── CCTV HUD VIEWPORT ──────────────────────────────────────── */
+.cctv-hud {{
+    position: relative;
+    background: #06090E;
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: var(--r);
-    padding: 18px 20px;
-    box-shadow: var(--shadow-card);
-    transition: border-color var(--t);
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    margin-bottom: 12px;
 }}
-
-/* ── SECTION LABEL ──────────────────────────────────────────── */
-.section-label {{
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
+.cctv-hud-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: rgba(12, 17, 26, 0.95);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.70rem;
+    color: rgba(241,245,249,0.7);
+    letter-spacing: 0.5px;
+}}
+.cctv-live-tag {{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #F59E0B;
+}}
+.cctv-meta {{
     display: flex;
     align-items: center;
-    gap: 7px;
-}}
-.section-label svg {{ opacity: 0.5; }}
-.section-label::after {{
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border-subtle);
-    margin-left: 4px;
+    gap: 14px;
+    font-size: 0.68rem;
+    color: rgba(241,245,249,0.45);
 }}
 
-/* ── VIOLATION FEED ─────────────────────────────────────────── */
+/* ── ZERO-JITTER FIXED-HEIGHT INCIDENT FEED ─────────────────── */
+.feed-scroll-box {{
+    max-height: 370px;
+    min-height: 370px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}}
 .v-card {{
     background: var(--bg-card-2);
     border: 1px solid var(--border-subtle);
-    border-left: 3px solid #D32F2F;
+    border-left: 3px solid #EF4444;
     border-radius: var(--r-sm);
-    padding: 10px 14px;
-    margin-bottom: 7px;
-    transition: border-color var(--t);
+    padding: 10px 12px;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+    animation: slideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }}
-.v-card-critical {{ border-left-color: #D32F2F; }}
-.v-card-high     {{ border-left-color: #F57F17; border-left-color: #E65100; }}
-.v-card-resolved {{ border-left-color: #2E7D32; }}
+.v-card:hover {{
+    transform: translateX(2px);
+    border-color: rgba(255,255,255,0.18);
+}}
+@keyframes slideIn {{
+    from {{ opacity: 0; transform: translateY(-8px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+}}
+.v-card-critical {{ border-left-color: #EF4444; }}
+.v-card-high     {{ border-left-color: #F59E0B; }}
+.v-card-resolved {{ border-left-color: #10B981; }}
 
 .v-time {{
     font-family: 'JetBrains Mono', monospace;
-    font-size: 0.67rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
 }}
 .v-type {{
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--text-primary);
-    margin: 3px 0;
+    margin: 3px 0 2px;
 }}
 .v-meta {{
-    font-size: 0.7rem;
-    color: var(--text-muted);
+    font-size: 0.70rem;
+    color: var(--text-secondary);
 }}
 
 /* ── STATUS BADGES ──────────────────────────────────────────── */
 .badge {{
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border-radius: 20px;
+    gap: 5px;
+    padding: 2.5px 8px;
+    border-radius: 4px;
     font-size: 0.63rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     white-space: nowrap;
 }}
-.badge-critical {{ background: rgba(211,47,47,0.12);  color: #EF9A9A; border: 1px solid rgba(211,47,47,0.3); }}
-.badge-high     {{ background: rgba(230,81,0,0.12);   color: #FFAB91; border: 1px solid rgba(230,81,0,0.3); }}
-.badge-safe     {{ background: rgba(46,125,50,0.12);  color: #A5D6A7; border: 1px solid rgba(46,125,50,0.3); }}
-.badge-info     {{ background: rgba(0,131,143,0.10);  color: #80DEEA; border: 1px solid rgba(0,131,143,0.25); }}
-.badge-running  {{ background: rgba(249,168,37,0.12); color: #FFE082; border: 1px solid rgba(249,168,37,0.3); }}
+.badge-critical {{ background: rgba(239,68,68,0.14);  color: #FCA5A5; border: 1px solid rgba(239,68,68,0.35); }}
+.badge-high     {{ background: rgba(245,158,11,0.14); color: #FCD34D; border: 1px solid rgba(245,158,11,0.35); }}
+.badge-safe     {{ background: rgba(16,185,129,0.14); color: #6EE7B7; border: 1px solid rgba(16,185,129,0.35); }}
+.badge-info     {{ background: rgba(6,182,212,0.12);  color: #67E8F9; border: 1px solid rgba(6,182,212,0.30); }}
+.badge-running  {{ background: rgba(245,158,11,0.15); color: #FDE68A; border: 1px solid rgba(245,158,11,0.40); }}
 
 /* ── STATUS DOTS ────────────────────────────────────────────── */
 .dot {{ display: inline-block; width: 7px; height: 7px; border-radius: 50%; }}
-.dot-green   {{ background: #4CAF50; box-shadow: 0 0 5px rgba(76,175,80,0.5); }}
-.dot-amber   {{ background: #FFC107; box-shadow: 0 0 5px rgba(255,193,7,0.5); }}
-.dot-red     {{ background: #F44336; box-shadow: 0 0 5px rgba(244,67,54,0.5); }}
-.dot-grey    {{ background: rgba(232,237,242,0.25); }}
-.dot-live    {{ background: #F9A825; animation: pulse-dot 1.5s infinite; box-shadow: 0 0 6px rgba(249,168,37,0.6); }}
+.dot-green   {{ background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }}
+.dot-amber   {{ background: #F59E0B; box-shadow: 0 0 6px rgba(245,158,11,0.5); }}
+.dot-red     {{ background: #EF4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }}
+.dot-grey    {{ background: rgba(241,245,249,0.25); }}
+.dot-live    {{ background: #F59E0B; animation: pulse-dot 1.5s infinite; box-shadow: 0 0 8px rgba(245,158,11,0.7); }}
 @keyframes pulse-dot {{
     0%, 100% {{ opacity: 1; transform: scale(1); }}
-    50%       {{ opacity: 0.5; transform: scale(0.8); }}
+    50%       {{ opacity: 0.4; transform: scale(0.85); }}
 }}
-
 /* ── BRAND HEADER ───────────────────────────────────────────── */
 .brand-header {{
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
-    border-top: 2px solid #F9A825;
+    border-top: 2px solid var(--accent-primary);
     border-radius: var(--r);
-    padding: 14px 20px;
-    margin-bottom: 18px;
+    padding: 12px 20px;
+    margin-bottom: 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     box-shadow: var(--shadow-card);
+    backdrop-filter: blur(16px);
 }}
 .brand-title {{
     font-size: 1.15rem;
@@ -462,9 +498,9 @@ div[data-baseweb="select"] > div:focus-within {{
     line-height: 1;
 }}
 .brand-sub {{
-    font-size: 0.67rem;
+    font-size: 0.68rem;
     color: var(--text-muted);
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     margin-top: 3px;
 }}
 .brand-right {{
@@ -472,76 +508,92 @@ div[data-baseweb="select"] > div:focus-within {{
     align-items: center;
     gap: 16px;
 }}
-.header-status {{
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.72rem;
-    color: var(--text-secondary);
-}}
 
 /* ── SITE STATUS PANELS ─────────────────────────────────────── */
 .status-panel {{
     border-radius: var(--r);
-    padding: 16px 18px;
+    padding: 14px 16px;
     text-align: center;
-    border: 1px solid;
+    border: 1px solid var(--border-subtle);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-card);
+    transition: all var(--t);
 }}
-.status-safe     {{ background: rgba(46,125,50,0.08);  border-color: rgba(46,125,50,0.25); }}
-.status-warning  {{ background: rgba(249,168,37,0.08); border-color: rgba(249,168,37,0.25); }}
+.status-safe     {{ border-color: rgba(16,185,129,0.30); background: rgba(16,185,129,0.06); }}
+.status-warning  {{ border-color: rgba(245,158,11,0.30); background: rgba(245,158,11,0.06); }}
 .status-critical {{
-    background: rgba(211,47,47,0.10);
-    border-color: rgba(211,47,47,0.3);
+    border-color: rgba(239,68,68,0.40);
+    background: rgba(239,68,68,0.08);
     animation: pulse-border 2s infinite;
 }}
 @keyframes pulse-border {{
-    0%, 100% {{ border-color: rgba(211,47,47,0.3); }}
-    50%       {{ border-color: rgba(211,47,47,0.6); }}
+    0%, 100% {{ border-color: rgba(239,68,68,0.35); }}
+    50%       {{ border-color: rgba(239,68,68,0.70); box-shadow: 0 0 16px rgba(239,68,68,0.25); }}
 }}
 
-/* ── VIDEO AREA ─────────────────────────────────────────────── */
+/* ── HIGH-TECH VIDEO STANDBY VIEWPORT ───────────────────────── */
 .video-standby {{
-    background: var(--bg-card-2);
-    border: 1px solid var(--border-subtle);
+    background: radial-gradient(circle at 50% 50%, rgba(245,158,11,0.05) 0%, #06090E 75%);
+    border: 1px solid rgba(255,255,255,0.08);
     border-radius: var(--r);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 320px;
-    padding: 48px 24px;
+    min-height: 360px;
+    padding: 40px 24px;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+}}
+.video-standby::before {{
+    content: '';
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    border: 1px dashed rgba(245,158,11,0.15);
+    animation: radar-sweep 10s linear infinite;
+    pointer-events: none;
+}}
+@keyframes radar-sweep {{
+    from {{ transform: rotate(0deg); }}
+    to   {{ transform: rotate(360deg); }}
 }}
 .video-standby-icon {{
     width: 52px; height: 52px;
-    border-radius: 50%;
-    background: var(--accent-glow);
-    border: 1.5px solid rgba(249,168,37,0.2);
+    border-radius: 12px;
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.30);
     display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 16px;
-    color: #F9A825;
+    margin: 0 auto 14px;
+    color: #F59E0B;
+    box-shadow: 0 0 20px rgba(245,158,11,0.20);
 }}
 .video-standby-title {{
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    letter-spacing: 0.2px;
 }}
 .video-standby-sub {{
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: var(--text-muted);
-    max-width: 280px;
-    line-height: 1.6;
-    margin: 0 auto 20px;
+    max-width: 320px;
+    line-height: 1.5;
+    margin: 0 auto 18px;
 }}
 .ready-indicator {{
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    color: var(--text-muted);
-    margin: 3px 0;
-    justify-content: center;
+    gap: 7px;
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 4px 10px;
+    border-radius: 20px;
 }}
 
 /* ── SCAN COMPLETE BANNER ───────────────────────────────────── */
@@ -606,11 +658,6 @@ div[data-baseweb="select"] > div:focus-within {{
 /* ── HR ─────────────────────────────────────────────────────── */
 hr {{ border-color: var(--border-subtle) !important; margin: 12px 0 !important; }}
 
-/* ── SCROLLBAR ──────────────────────────────────────────────── */
-::-webkit-scrollbar {{ width: 4px; height: 4px; }}
-::-webkit-scrollbar-track {{ background: transparent; }}
-::-webkit-scrollbar-thumb {{ background: rgba(249,168,37,0.2); border-radius: 4px; }}
-::-webkit-scrollbar-thumb:hover {{ background: rgba(249,168,37,0.4); }}
 
 /* ── METRIC WIDGET OVERRIDE ─────────────────────────────────── */
 [data-testid="stMetric"] {{
@@ -840,7 +887,37 @@ def navigation_tip():
 """, unsafe_allow_html=True)
 
 
+def render_cctv_hud_header(source_name: str = "CAM-01 • SECTOR NORTH", is_live: bool = False, fps_val: float = 0.0):
+    """Render the top metadata bar for the CCTV HUD viewport."""
+    live_badge = (
+        '<span class="dot dot-live" style="margin-right:6px;"></span>'
+        '<span class="cctv-live-tag">LIVE FEED</span>'
+    ) if is_live else (
+        '<span class="dot dot-grey" style="margin-right:6px;"></span>'
+        '<span style="color:var(--text-muted);font-weight:600;font-size:0.68rem;">STANDBY</span>'
+    )
+    fps_badge = (
+        f'<span style="color:var(--accent);font-weight:700;">{fps_val:.1f} FPS</span>'
+    ) if (is_live and fps_val > 0) else '<span style="color:var(--text-muted);">0.0 FPS</span>'
+
+    st.markdown(f"""
+<div class="cctv-hud-header">
+    <div style="display:flex;align-items:center;gap:10px;">
+        {live_badge}
+        <span style="opacity:0.35;">|</span>
+        <span style="font-weight:600;color:var(--text-primary);">{source_name}</span>
+    </div>
+    <div class="cctv-meta">
+        <span>YOLOv8s • AI GUARD</span>
+        <span style="opacity:0.35;">|</span>
+        {fps_badge}
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+
 def standby_placeholder(db_ok: bool = True):
+
     """Rich standby screen — not an empty black box."""
     db_status = "Connected" if db_ok else "Unavailable"
     db_dot    = "dot-green" if db_ok else "dot-amber"
