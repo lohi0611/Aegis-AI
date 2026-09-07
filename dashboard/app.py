@@ -1,4 +1,5 @@
 import os
+import io
 import sys
 import time
 import csv
@@ -21,15 +22,19 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
+from PIL import Image
 
 # ── Safe OpenCV import (Streamlit Cloud may have broken wheels) ───────────────
+_CV2_ERR_MSG = ""
 try:
     import cv2
     CV2_OK = True
 except Exception as _cv2_err:
     CV2_OK = False
     cv2 = None  # type: ignore
+    _CV2_ERR_MSG = str(_cv2_err)
     print(f"[AEGIS] WARNING: OpenCV failed to import: {_cv2_err}")
+
 
 
 # ── App modules ───────────────────────────────────────────────────────────────
@@ -471,12 +476,21 @@ with c_logs:
 # ─────────────────────────────────────────────────────────────────────────────
 def _save_snapshot_bg(frame_bgr: np.ndarray, snap_abs: str):
     """Write snapshot JPEG at high quality in a background thread.
-    Expects a BGR numpy array (as returned by YOLO .plot()).
+    Works with either OpenCV or Pillow so it never fails on headless environments.
     """
     try:
-        cv2.imwrite(snap_abs, frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
-    except Exception:
-        pass
+        if CV2_OK and cv2 is not None:
+            cv2.imwrite(snap_abs, frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 95])
+        else:
+            # Pillow fallback: convert BGR (from YOLO plot) to RGB for correct colors
+            if len(frame_bgr.shape) == 3 and frame_bgr.shape[2] == 3:
+                rgb_img = frame_bgr[:, :, ::-1]
+                Image.fromarray(rgb_img).save(snap_abs, format="JPEG", quality=95)
+            else:
+                Image.fromarray(frame_bgr).save(snap_abs, format="JPEG", quality=95)
+    except Exception as _snap_err:
+        print(f"[AEGIS] Snapshot save error: {_snap_err}")
+
 
 
 def log_violation(tracker, w_id, d, frame_number, annotated_frame):
@@ -661,11 +675,6 @@ def draw_empty_perf():
 # ─────────────────────────────────────────────────────────────────────────────
 if video_source == "Laptop Camera (Browser)":
     if st.session_state.running:
-        if not CV2_OK:
-            st.error("⚠️ OpenCV is not available in this environment. "
-                     "Please check the deployment logs and requirements.txt.")
-            st.session_state.running = False
-            st.stop()
         with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
             detector = _load_detector(confidence_slider)
         with cam_badge_ph:
@@ -682,8 +691,21 @@ if video_source == "Laptop Camera (Browser)":
             st.rerun()
         elif isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
             _, encoded = val.split(",", 1)
-            nparr = np.frombuffer(base64.b64decode(encoded), np.uint8)
-            frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            raw_bytes = base64.b64decode(encoded)
+            frame = None
+            if CV2_OK and cv2 is not None:
+                try:
+                    nparr = np.frombuffer(raw_bytes, np.uint8)
+                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                except Exception:
+                    frame = None
+            if frame is None:
+                # Pillow fallback: pure Python, zero OpenCV / libGL dependency
+                try:
+                    pil_img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+                    frame = np.array(pil_img)
+                except Exception as _e:
+                    frame = None
 
             if frame is not None:
                 st.session_state.total_frames_scanned += 1
@@ -691,7 +713,10 @@ if video_source == "Laptop Camera (Browser)":
 
                 # ── Performance: resize on cloud to cap inference resolution ──
                 if _IS_CLOUD:
-                    frame = cv2.resize(frame, (640, 480))
+                    if CV2_OK and cv2 is not None:
+                        frame = cv2.resize(frame, (640, 480))
+                    else:
+                        frame = np.array(Image.fromarray(frame).resize((640, 480)))
 
                 # ── Performance: skip every 2nd frame on cloud (show cached) ──
                 if _IS_CLOUD and frame_count % 2 == 0:
@@ -699,6 +724,7 @@ if video_source == "Laptop Camera (Browser)":
                         video_ph.image(st.session_state.last_annotated_frame,
                                        use_container_width=True)
                     st.rerun()
+
 
                 annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                         alert_classes=alert_classes)
@@ -743,8 +769,9 @@ if video_source == "Laptop Camera (Browser)":
 # ─────────────────────────────────────────────────────────────────────────────
 elif st.session_state.running:
     if not CV2_OK:
-        st.error("⚠️ OpenCV is not available in this environment. "
-                 "Please check the deployment logs and requirements.txt.")
+        err_detail = f": {_CV2_ERR_MSG}" if _CV2_ERR_MSG else ""
+        st.error(f"⚠️ Video file decoding requires OpenCV{err_detail}. "
+                 "Please switch video source to 'Laptop Camera (Browser)' which runs directly without OpenCV.")
         st.session_state.running = False
         st.stop()
     detector = _load_detector(confidence_slider)
