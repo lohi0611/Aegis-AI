@@ -1,9 +1,10 @@
-streamlit
-ultralytics
+streamlit>=1.30.0
+ultralytics>=8.0.0
 torch
-opencv-python
 opencv-python-headless
 gdown
 numpy
 pandas
 plotly
+SQLAlchemy>=2.0.0
+pytest
