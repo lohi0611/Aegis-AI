@@ -11,12 +11,23 @@ from src.database.models import Base
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
+# On Streamlit Cloud the source tree is read-only; write DB to /tmp instead
+_IS_CLOUD = (
+    os.environ.get("STREAMLIT_SHARING_MODE") == "1"
+    or os.environ.get("HOME", "").startswith("/home/adminuser")
+)
+
 
 def get_default_db_url() -> str:
-    """Return default SQLite database URL."""
-    db_file = REPO_ROOT / "dashboard" / "aegis_safety.db"
-    db_file.parent.mkdir(parents=True, exist_ok=True)
+    """Return default SQLite database URL, cloud-safe."""
+    if _IS_CLOUD:
+        db_dir = Path("/tmp/aegis_data")
+    else:
+        db_dir = REPO_ROOT / "dashboard"
+    db_dir.mkdir(parents=True, exist_ok=True)
+    db_file = db_dir / "aegis_safety.db"
     return f"sqlite:///{db_file.as_posix()}"
+
 
 
 def init_database(db_url: Optional[str] = None):

@@ -17,11 +17,20 @@ for _p in [str(_current_dir), str(_project_root)]:
         sys.path.insert(0, _p)
 
 import streamlit as st
-import cv2
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit.components.v1 as components
+
+# ── Safe OpenCV import (Streamlit Cloud may have broken wheels) ───────────────
+try:
+    import cv2
+    CV2_OK = True
+except Exception as _cv2_err:
+    CV2_OK = False
+    cv2 = None  # type: ignore
+    print(f"[AEGIS] WARNING: OpenCV failed to import: {_cv2_err}")
+
 
 # ── App modules ───────────────────────────────────────────────────────────────
 from ui_utils import (
@@ -39,11 +48,19 @@ from db import (
 )
 
 
+# ── Cached model loader (runs once per session, not on every rerun) ───────────
+@st.cache_resource(show_spinner="⛑ Loading AEGIS detection model…")
+def _load_detector(conf: float) -> "PPEDetector":
+    """Load YOLOv8 model once and cache it. Re-instantiates only if conf changes."""
+    return PPEDetector(conf=conf)
+
+
 # ── Severity helper ───────────────────────────────────────────────────────────
 CRITICAL_CLASSES = {"NO-Hardhat", "NO-Safety Vest"}
 
 def severity_for(cls_name: str) -> str:
     return "CRITICAL" if cls_name in CRITICAL_CLASSES else "HIGH"
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -129,23 +146,26 @@ st.set_page_config(
 )
 apply_custom_css()
 
-# ── Path resolution ───────────────────────────────────────────────────────────
+# ── Path resolution (cloud-safe) ─────────────────────────────────────────────
 current_dir  = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 
-def resolve_log_csv():
-    for c in [
-        os.path.join(project_root, "violations.csv"),
-        os.path.join(current_dir,  "violations.csv"),
-        "violations.csv",
-    ]:
-        if os.path.exists(c):
-            return c
-    return os.path.join(project_root, "violations.csv")
+# On Streamlit Cloud the source tree is read-only; write all runtime data to /tmp
+_IS_CLOUD = (
+    os.environ.get("STREAMLIT_SHARING_MODE") == "1"
+    or os.environ.get("HOME", "").startswith("/home/adminuser")
+)
+if _IS_CLOUD:
+    _DATA_DIR = Path("/tmp/aegis_data")
+else:
+    _DATA_DIR = Path(project_root)
 
-LOG_CSV  = resolve_log_csv()
-SNAP_DIR = os.path.join(project_root, "snapshots")
+_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+LOG_CSV  = str(_DATA_DIR / "violations.csv")
+SNAP_DIR = str(_DATA_DIR / "snapshots")
 os.makedirs(SNAP_DIR, exist_ok=True)
+
 
 component_dir = os.path.join(current_dir, "camera_component")
 auto_camera   = components.declare_component("auto_camera", path=component_dir)
@@ -615,7 +635,12 @@ def draw_empty_perf():
 # ─────────────────────────────────────────────────────────────────────────────
 if video_source == "Laptop Camera (Browser)":
     if st.session_state.running:
-        detector = PPEDetector(conf=confidence_slider)
+        if not CV2_OK:
+            st.error("⚠️ OpenCV is not available in this environment. "
+                     "Please check the deployment logs and requirements.txt.")
+            st.session_state.running = False
+            st.stop()
+        detector = _load_detector(confidence_slider)
         with cam_badge_ph:
             val = auto_camera(key="auto_camera_key")
 
@@ -676,7 +701,12 @@ if video_source == "Laptop Camera (Browser)":
 #  DETECTION ENGINE — VIDEO / LOCAL WEBCAM
 # ─────────────────────────────────────────────────────────────────────────────
 elif st.session_state.running:
-    detector = PPEDetector(conf=confidence_slider)
+    if not CV2_OK:
+        st.error("⚠️ OpenCV is not available in this environment. "
+                 "Please check the deployment logs and requirements.txt.")
+        st.session_state.running = False
+        st.stop()
+    detector = _load_detector(confidence_slider)
 
     # Resolve capture source
     cap_src = None
