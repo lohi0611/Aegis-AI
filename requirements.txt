@@ -1,6 +1,5 @@
 streamlit>=1.30.0
 ultralytics>=8.0.0
-torch
 opencv-python-headless
 gdown
 numpy
