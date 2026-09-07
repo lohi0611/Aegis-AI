@@ -1,11 +1,13 @@
-"""
-AEGIS Safety Intelligence — Main Application
-Construction-site PPE compliance monitoring with real-time detection
-and persistent SQLite/PostgreSQL violation database.
-"""
 import os
 import sys
+import time
+import csv
+import base64
+import tempfile
+import threading
 from pathlib import Path
+from collections import deque
+from datetime import datetime
 
 # ── Ensure dashboard directory and project root are in sys.path ──────────────
 _current_dir = Path(__file__).resolve().parent
@@ -14,22 +16,15 @@ for _p in [str(_current_dir), str(_project_root)]:
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-import time
-import csv
-import base64
-import tempfile
-from collections import deque
-from datetime import datetime
-
 import streamlit as st
 import cv2
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
 # ── App modules ───────────────────────────────────────────────────────────────
 from ui_utils import (
-
     apply_custom_css, render_brand_header, kpi_card,
     draw_violation_feed_card, draw_site_status, draw_system_status,
     navigation_tip, standby_placeholder, scan_complete_placeholder,
@@ -42,7 +37,7 @@ from db import (
     DB_AVAILABLE, create_scan_session, close_scan_session,
     log_violation_db, get_session_violations,
 )
-import streamlit.components.v1 as components
+
 
 # ── Severity helper ───────────────────────────────────────────────────────────
 CRITICAL_CLASSES = {"NO-Hardhat", "NO-Safety Vest"}
@@ -434,8 +429,6 @@ with c_logs:
 # ─────────────────────────────────────────────────────────────────────────────
 #  SHARED VIOLATION LOGGING HELPER
 # ─────────────────────────────────────────────────────────────────────────────
-import threading
-
 def _save_snapshot_bg(frame_bgr: np.ndarray, snap_abs: str):
     """Write snapshot JPEG in a background thread so the camera loop is never blocked."""
     try:
@@ -510,7 +503,7 @@ def log_violation(tracker, w_id, d, frame_number, annotated_frame):
 # ─────────────────────────────────────────────────────────────────────────────
 #  SHARED UI REFRESH
 # ─────────────────────────────────────────────────────────────────────────────
-def _perf_chart(fps_history, time_history, key: str):
+def _perf_chart(fps_history, time_history, key: str = "fps"):
     """Build and return FPS Plotly figure."""
     layout_kw = get_plotly_layout_defaults()
     fig = go.Figure()
@@ -520,7 +513,7 @@ def _perf_chart(fps_history, time_history, key: str):
             mode="lines",
             line=dict(color=ORANGE, width=2),
             fill="tozeroy",
-            fillcolor=f"rgba(249,168,37,0.07)",
+            fillcolor="rgba(249,168,37,0.07)",
             name="FPS",
         ))
     fig.update_layout(
@@ -554,11 +547,12 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
 
     # Performance chart
     perf_ph.plotly_chart(
-        _perf_chart(fps_history, time_history, key=f"fps_{total_frames}"),
+        _perf_chart(fps_history, time_history, key="fps_live"),
         use_container_width=True,
         config={"displayModeBar": False},
-        key=f"fps_chart_{total_frames}",
+        key="fps_chart_live",
     )
+
 
     # Violation feed
     with feed_ph:
