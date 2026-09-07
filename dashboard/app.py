@@ -660,9 +660,23 @@ if video_source == "Laptop Camera (Browser)":
 
             if frame is not None:
                 st.session_state.total_frames_scanned += 1
+                frame_count = st.session_state.total_frames_scanned
+
+                # ── Performance: resize on cloud to cap inference resolution ──
+                if _IS_CLOUD:
+                    frame = cv2.resize(frame, (640, 480))
+
+                # ── Performance: skip every 2nd frame on cloud (show cached) ──
+                if _IS_CLOUD and frame_count % 2 == 0:
+                    if st.session_state.last_annotated_frame is not None:
+                        video_ph.image(st.session_state.last_annotated_frame,
+                                       use_container_width=True)
+                    st.rerun()
+
                 annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                         alert_classes=alert_classes)
                 st.session_state.last_annotated_frame = annotated
+
 
                 rects       = [d["bbox"] for d in detections]
                 class_names = [d["class_name"] for d in detections]
@@ -773,8 +787,23 @@ elif st.session_state.running:
             st.session_state.total_frames_scanned = total_frames
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # ── Performance: cap resolution on cloud before inference ─────────
+            if _IS_CLOUD:
+                rgb = cv2.resize(rgb, (640, 480))
+
+            # ── Performance: skip inference on even frames on cloud ───────────
+            if _IS_CLOUD and total_frames % 2 == 0:
+                if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
+                    if total_frames % 6 == 0:  # still refresh display every 6 frames
+                        refresh_ui(st.session_state.last_annotated_frame, fps,
+                                   total_frames, fps_history, time_history)
+                continue
+
             annotated, detections = detector.detect(rgb, line_width=line_thickness,
                                                     alert_classes=alert_classes)
+            st.session_state.last_annotated_frame = annotated
+
 
             rects       = [d["bbox"] for d in detections]
             class_names = [d["class_name"] for d in detections]
