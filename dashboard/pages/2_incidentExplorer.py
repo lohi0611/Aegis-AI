@@ -3,13 +3,24 @@ AEGIS Safety Intelligence — Incident Explorer
 Browse, filter, and export individual violation records from the database.
 """
 import os
+import sys
+from pathlib import Path
 from datetime import datetime, date, timedelta
+
+# ── Ensure dashboard directory and project root are in sys.path ──────────────
+_current_dir = Path(__file__).resolve().parent
+_dashboard_dir = _current_dir.parent
+_project_root = _dashboard_dir.parent
+for _p in [str(_dashboard_dir), str(_project_root)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
 from ui_utils import (
+
     apply_custom_css, mission_control_header, kpi_card,
     navigation_tip, render_theme_toggle, section_label,
     get_plotly_layout_defaults, ICONS, ORANGE, RED, GREEN, TEAL, AMBER,

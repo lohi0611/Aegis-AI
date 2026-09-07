@@ -4,6 +4,16 @@ Construction-site PPE compliance monitoring with real-time detection
 and persistent SQLite/PostgreSQL violation database.
 """
 import os
+import sys
+from pathlib import Path
+
+# ── Ensure dashboard directory and project root are in sys.path ──────────────
+_current_dir = Path(__file__).resolve().parent
+_project_root = _current_dir.parent
+for _p in [str(_current_dir), str(_project_root)]:
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
+
 import time
 import csv
 import base64
@@ -19,6 +29,7 @@ import plotly.graph_objects as go
 
 # ── App modules ───────────────────────────────────────────────────────────────
 from ui_utils import (
+
     apply_custom_css, render_brand_header, kpi_card,
     draw_violation_feed_card, draw_site_status, draw_system_status,
     navigation_tip, standby_placeholder, scan_complete_placeholder,

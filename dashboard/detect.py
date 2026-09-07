@@ -20,10 +20,26 @@ class PPEDetector:
                     model_path = p
                     break
             
-            if model_path is None:
-                model_path = "models/yolov8_ppe.pt" # Fallback
+            if model_path is None or not os.path.exists(model_path):
+                # Attempt to download model if missing
+                model_target = os.path.join(project_root, "models", "yolov8_ppe.pt")
+                os.makedirs(os.path.dirname(model_target), exist_ok=True)
+                if not os.path.exists(model_target):
+                    try:
+                        import gdown
+                        model_url = "https://drive.google.com/uc?id=1qLB4ZjijrpNdHcphQftVudm8y4SOZDoL"
+                        gdown.download(model_url, model_target, quiet=False)
+                    except Exception as _e:
+                        print(f"[AEGIS] Model download failed: {_e}")
+                
+                if os.path.exists(model_target):
+                    model_path = model_target
+                else:
+                    model_path = "yolov8n.pt" # Safe fallback
         
         self.model = YOLO(model_path)
+
+
         self.conf = conf
         self.class_names = [
             "Hardhat",
