@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import numpy as np
 import pytest
 
-from evaluation.evaluate_compliance import compute_binary_metrics
+from evaluation.metrics_utils import compute_binary_metrics
 from src.association.spatial import (
     SpatialPPEAssociator,
 )

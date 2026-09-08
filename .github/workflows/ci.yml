@@ -44,7 +44,7 @@ jobs:
             -v \
             --tb=short \
             -x \
-            --ignore=tests/test_config.py  # config test requires local paths
+            --ignore=tests/test_config.py
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
@@ -90,11 +90,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install YAML parser
+        run: pip install pyyaml
+
       - name: Check model config references are valid
         run: |
           python -c "
           import yaml
-          with open('config.yaml') as f:
+          with open('configs/config.yaml') as f:
               cfg = yaml.safe_load(f)
           model_path = cfg.get('model', {}).get('path', '')
           print(f'Model path configured: {model_path}')
