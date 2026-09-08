@@ -3,13 +3,13 @@ AEGIS-AI — Dataset Quality Audit & Data Leakage Verification
 Audits image resolutions, class distributions, annotation validity,
 and computes MD5/perceptual hash overlap across train, val, and test splits to detect data leakage.
 """
-import os
-import sys
-import hashlib
+
 import argparse
-from pathlib import Path
+import hashlib
+import sys
 from collections import Counter
-import cv2
+from pathlib import Path
+
 import pandas as pd
 from PIL import Image
 
@@ -20,11 +20,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
 
 
@@ -121,18 +121,22 @@ def audit_dataset(
         va_c = class_counts["valid"][cname]
         te_c = class_counts["test"][cname]
         tot = tr_c + va_c + te_c
-        class_dist_rows.append({
-            "Class Name": cname,
-            "Train Instances": tr_c,
-            "Val Instances": va_c,
-            "Test Instances": te_c,
-            "Total Instances": tot,
-            "Percentage (%)": 0.0,  # Will compute below
-        })
+        class_dist_rows.append(
+            {
+                "Class Name": cname,
+                "Train Instances": tr_c,
+                "Val Instances": va_c,
+                "Test Instances": te_c,
+                "Total Instances": tot,
+                "Percentage (%)": 0.0,  # Will compute below
+            }
+        )
 
     total_all_instances = sum(r["Total Instances"] for r in class_dist_rows)
     for r in class_dist_rows:
-        r["Percentage (%)"] = round((r["Total Instances"] / max(1, total_all_instances)) * 100, 2)
+        r["Percentage (%)"] = round(
+            (r["Total Instances"] / max(1, total_all_instances)) * 100, 2
+        )
 
     class_dist_df = pd.DataFrame(class_dist_rows)
 
@@ -145,7 +149,11 @@ def audit_dataset(
             "train_val_exact_duplicate_hashes": leak_train_val,
             "train_test_exact_duplicate_hashes": leak_train_test,
             "val_test_exact_duplicate_hashes": leak_val_test,
-            "leakage_verdict": "PASSED — Zero cross-split exact duplicates detected" if (leak_train_val == 0 and leak_train_test == 0) else "WARNING — Potential duplicate overlap detected",
+            "leakage_verdict": (
+                "PASSED — Zero cross-split exact duplicates detected"
+                if (leak_train_val == 0 and leak_train_test == 0)
+                else "WARNING — Potential duplicate overlap detected"
+            ),
         },
         "corrupted_images_detected": len(corrupted_images),
         "class_distribution": class_dist_rows,
@@ -160,12 +168,16 @@ def audit_dataset(
     print(" DATASET AUDIT & CLASS DISTRIBUTION SUMMARY")
     print("=" * 75)
     for s, stats in split_stats.items():
-        print(f" Split [{s.upper()}]: {stats['total_images']} images | {stats['total_bbox_annotations']} annotations")
+        print(
+            f" Split [{s.upper()}]: {stats['total_images']} images | {stats['total_bbox_annotations']} annotations"
+        )
     print("-" * 75)
     print(" DATA LEAKAGE INTEGRITY:")
-    print(f"   Train ∩ Test exact duplicates: {leak_train_test}")
-    print(f"   Train ∩ Val exact duplicates:  {leak_train_val}")
-    print(f"   Leakage Verdict:               {audit_summary['data_leakage_audit']['leakage_verdict']}")
+    print(f"   Train & Test exact duplicates: {leak_train_test}")
+    print(f"   Train & Val exact duplicates:  {leak_train_val}")
+    print(
+        f"   Leakage Verdict:               {audit_summary['data_leakage_audit']['leakage_verdict']}"
+    )
     print("-" * 75)
     print(class_dist_df.to_string(index=False))
     print("=" * 75 + "\n")

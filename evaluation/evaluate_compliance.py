@@ -6,13 +6,14 @@ and Worker-Level PPE Compliance Decision Accuracy.
 Calculates Confusion Matrices, Accuracy, Precision, Recall (Safety Sensitivity),
 Specificity, F1-Score, False Positive Rate (FPR), and Missed Hazard Rate (FNR).
 """
+
+import argparse
 import os
 import sys
-import argparse
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any, Dict, List
+
 import cv2
-import numpy as np
 import pandas as pd
 from ultralytics import YOLO
 
@@ -22,18 +23,20 @@ REPO_ROOT = SCRIPT_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from src.association.spatial import SpatialPPEAssociator, compute_iou
-from src.compliance.rules import PPERuleEngine
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
+from src.association.spatial import SpatialPPEAssociator, compute_iou
+from src.compliance.rules import PPERuleEngine
 
 
-def parse_yolo_labels_with_boxes(label_path: Path, img_w: int, img_h: int, class_mapping: Dict[int, str]) -> List[Dict[str, Any]]:
+def parse_yolo_labels_with_boxes(
+    label_path: Path, img_w: int, img_h: int, class_mapping: Dict[int, str]
+) -> List[Dict[str, Any]]:
     """Parse YOLO label file and return bounding boxes in absolute coordinates."""
     if not label_path.exists():
         return []
@@ -48,12 +51,14 @@ def parse_yolo_labels_with_boxes(label_path: Path, img_w: int, img_h: int, class
                 y1 = (cy - bh / 2.0) * img_h
                 x2 = (cx + bw / 2.0) * img_w
                 y2 = (cy + bh / 2.0) * img_h
-                items.append({
-                    "class_id": cls_id,
-                    "class_name": class_mapping.get(cls_id, f"Class_{cls_id}"),
-                    "bbox": [x1, y1, x2, y2],
-                    "confidence": 1.0,
-                })
+                items.append(
+                    {
+                        "class_id": cls_id,
+                        "class_name": class_mapping.get(cls_id, f"Class_{cls_id}"),
+                        "bbox": [x1, y1, x2, y2],
+                        "confidence": 1.0,
+                    }
+                )
     return items
 
 
@@ -64,7 +69,11 @@ def compute_binary_metrics(tp: int, fp: int, tn: int, fn: int) -> Dict[str, floa
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     specificity = tn / (tn + fp) if (tn + fp) > 0 else 0.0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+    f1 = (
+        2 * (precision * recall) / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
     fnr = fn / (tp + fn) if (tp + fn) > 0 else 0.0
 
@@ -124,7 +133,9 @@ def evaluate_compliance(
 
     model = YOLO(model_path)
     associator = SpatialPPEAssociator(containment_threshold=0.35)
-    rule_engine = PPERuleEngine(require_hardhat=True, require_vest=True, require_mask=False)
+    rule_engine = PPERuleEngine(
+        require_hardhat=True, require_vest=True, require_mask=False
+    )
 
     violation_names = {"NO-Hardhat", "NO-Mask", "NO-Safety Vest"}
 
@@ -137,7 +148,9 @@ def evaluate_compliance(
     frame_tn = 0
     frame_fn = 0
 
-    per_type_metrics = {vname: {"TP": 0, "FP": 0, "TN": 0, "FN": 0} for vname in violation_names}
+    per_type_metrics = {
+        vname: {"TP": 0, "FP": 0, "TN": 0, "FN": 0} for vname in violation_names
+    }
     detailed_frame_records = []
 
     # 2. Worker-Level Counters & Accounting
@@ -164,25 +177,41 @@ def evaluate_compliance(
         # -------------------------------------------------------------
         # A. FRAME-LEVEL EVALUATION
         # -------------------------------------------------------------
-        gt_violations = [item["class_name"] for item in gt_items if item["class_name"] in violation_names]
+        gt_violations = [
+            item["class_name"]
+            for item in gt_items
+            if item["class_name"] in violation_names
+        ]
         is_gt_frame_violation = len(gt_violations) > 0
 
         # Predict
-        results = model.predict(str(img_path), conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+        results = model.predict(
+            str(img_path),
+            conf=conf_thresh,
+            iou=iou_thresh,
+            device=device,
+            verbose=False,
+        )
         pred_boxes = results[0].boxes
 
         pred_items = []
         for b in pred_boxes:
             c_id = int(b.cls[0])
             c_name = class_mapping.get(c_id, f"Class_{c_id}")
-            pred_items.append({
-                "class_id": c_id,
-                "class_name": c_name,
-                "bbox": b.xyxy[0].tolist(),
-                "confidence": float(b.conf[0]),
-            })
+            pred_items.append(
+                {
+                    "class_id": c_id,
+                    "class_name": c_name,
+                    "bbox": b.xyxy[0].tolist(),
+                    "confidence": float(b.conf[0]),
+                }
+            )
 
-        pred_violations = [item["class_name"] for item in pred_items if item["class_name"] in violation_names]
+        pred_violations = [
+            item["class_name"]
+            for item in pred_items
+            if item["class_name"] in violation_names
+        ]
         is_pred_frame_violation = len(pred_violations) > 0
 
         decision_category = ""
@@ -211,14 +240,20 @@ def evaluate_compliance(
             elif gt_has_v and not pred_has_v:
                 per_type_metrics[vname]["FN"] += 1
 
-        detailed_frame_records.append({
-            "image": img_path.name,
-            "gt_has_violation": is_gt_frame_violation,
-            "pred_has_violation": is_pred_frame_violation,
-            "gt_violations": "|".join(gt_violations) if gt_violations else "Compliant",
-            "pred_violations": "|".join(pred_violations) if pred_violations else "Compliant",
-            "frame_decision_category": decision_category,
-        })
+        detailed_frame_records.append(
+            {
+                "image": img_path.name,
+                "gt_has_violation": is_gt_frame_violation,
+                "pred_has_violation": is_pred_frame_violation,
+                "gt_violations": (
+                    "|".join(gt_violations) if gt_violations else "Compliant"
+                ),
+                "pred_violations": (
+                    "|".join(pred_violations) if pred_violations else "Compliant"
+                ),
+                "frame_decision_category": decision_category,
+            }
+        )
 
         # -------------------------------------------------------------
         # B. WORKER-LEVEL EVALUATION (Spatial Association + Rule Engine)
@@ -229,28 +264,36 @@ def evaluate_compliance(
             p["track_id"] = f"GT_{idx}"
 
         gt_associated, _ = associator.associate(gt_persons, gt_ppe)
-        gt_worker_states = [rule_engine.evaluate_worker(w_rec) for w_rec in gt_associated]
+        gt_worker_states = [
+            rule_engine.evaluate_worker(w_rec) for w_rec in gt_associated
+        ]
 
         pred_persons = []
         pred_ppe = []
         p_counter = 0
         for item in pred_items:
             if item["class_name"] == "Person":
-                pred_persons.append({
-                    "bbox": item["bbox"],
-                    "track_id": f"PRED_{p_counter}",
-                    "confidence": item["confidence"],
-                })
+                pred_persons.append(
+                    {
+                        "bbox": item["bbox"],
+                        "track_id": f"PRED_{p_counter}",
+                        "confidence": item["confidence"],
+                    }
+                )
                 p_counter += 1
             else:
-                pred_ppe.append({
-                    "class_name": item["class_name"],
-                    "bbox": item["bbox"],
-                    "confidence": item["confidence"],
-                })
+                pred_ppe.append(
+                    {
+                        "class_name": item["class_name"],
+                        "bbox": item["bbox"],
+                        "confidence": item["confidence"],
+                    }
+                )
 
         pred_associated, _ = associator.associate(pred_persons, pred_ppe)
-        pred_worker_states = [rule_engine.evaluate_worker(w_rec) for w_rec in pred_associated]
+        pred_worker_states = [
+            rule_engine.evaluate_worker(w_rec) for w_rec in pred_associated
+        ]
 
         total_gt_workers_count += len(gt_worker_states)
         total_pred_workers_count += len(pred_worker_states)
@@ -288,15 +331,17 @@ def evaluate_compliance(
                     worker_fn += 1
                     w_cat = "False Negative"
 
-                detailed_worker_records.append({
-                    "image": img_path.name,
-                    "gt_worker_id": gt_w["worker_id"],
-                    "gt_status": gt_w["status"],
-                    "pred_worker_id": pr_w["worker_id"],
-                    "pred_status": pr_w["status"],
-                    "iou": round(best_iou, 3),
-                    "decision_category": w_cat,
-                })
+                detailed_worker_records.append(
+                    {
+                        "image": img_path.name,
+                        "gt_worker_id": gt_w["worker_id"],
+                        "gt_status": gt_w["status"],
+                        "pred_worker_id": pr_w["worker_id"],
+                        "pred_status": pr_w["status"],
+                        "iou": round(best_iou, 3),
+                        "decision_category": w_cat,
+                    }
+                )
             else:
                 # Missed GT Person Detection
                 unmatched_gt_workers_count += 1
@@ -307,15 +352,17 @@ def evaluate_compliance(
                     worker_tn += 1
                     w_cat = "True Negative (Missed Person Detection)"
 
-                detailed_worker_records.append({
-                    "image": img_path.name,
-                    "gt_worker_id": gt_w["worker_id"],
-                    "gt_status": gt_w["status"],
-                    "pred_worker_id": "Unmatched",
-                    "pred_status": "Not Detected",
-                    "iou": 0.0,
-                    "decision_category": w_cat,
-                })
+                detailed_worker_records.append(
+                    {
+                        "image": img_path.name,
+                        "gt_worker_id": gt_w["worker_id"],
+                        "gt_status": gt_w["status"],
+                        "pred_worker_id": "Unmatched",
+                        "pred_status": "Not Detected",
+                        "iou": 0.0,
+                        "decision_category": w_cat,
+                    }
+                )
 
         # Spurious predicted workers (False Alarms)
         for p_idx, pr_w in enumerate(pred_worker_states):
@@ -328,32 +375,35 @@ def evaluate_compliance(
                     worker_tn += 1
                     w_cat = "True Negative (Spurious Worker Detection)"
 
-                detailed_worker_records.append({
-                    "image": img_path.name,
-                    "gt_worker_id": "Unmatched",
-                    "gt_status": "No Ground Truth Worker",
-                    "pred_worker_id": pr_w["worker_id"],
-                    "pred_status": pr_w["status"],
-                    "iou": 0.0,
-                    "decision_category": w_cat,
-                })
+                detailed_worker_records.append(
+                    {
+                        "image": img_path.name,
+                        "gt_worker_id": "Unmatched",
+                        "gt_status": "No Ground Truth Worker",
+                        "pred_worker_id": pr_w["worker_id"],
+                        "pred_status": pr_w["status"],
+                        "iou": 0.0,
+                        "decision_category": w_cat,
+                    }
+                )
 
     # Total evaluated decisions
     evaluated_worker_decisions = worker_tp + worker_fp + worker_tn + worker_fn
 
     # Automated structural assertions
-    assert matched_workers_count + unmatched_gt_workers_count == total_gt_workers_count, (
-        f"Mismatch: {matched_workers_count} + {unmatched_gt_workers_count} != {total_gt_workers_count}"
-    )
-    assert matched_workers_count + unmatched_pred_workers_count == total_pred_workers_count, (
-        f"Mismatch: {matched_workers_count} + {unmatched_pred_workers_count} != {total_pred_workers_count}"
-    )
-    assert evaluated_worker_decisions == total_gt_workers_count + unmatched_pred_workers_count, (
-        f"Mismatch: {evaluated_worker_decisions} != {total_gt_workers_count} + {unmatched_pred_workers_count}"
-    )
-    assert len(detailed_worker_records) == evaluated_worker_decisions, (
-        f"Record count mismatch: {len(detailed_worker_records)} vs {evaluated_worker_decisions}"
-    )
+    assert (
+        matched_workers_count + unmatched_gt_workers_count == total_gt_workers_count
+    ), f"Mismatch: {matched_workers_count} + {unmatched_gt_workers_count} != {total_gt_workers_count}"
+    assert (
+        matched_workers_count + unmatched_pred_workers_count == total_pred_workers_count
+    ), f"Mismatch: {matched_workers_count} + {unmatched_pred_workers_count} != {total_pred_workers_count}"
+    assert (
+        evaluated_worker_decisions
+        == total_gt_workers_count + unmatched_pred_workers_count
+    ), f"Mismatch: {evaluated_worker_decisions} != {total_gt_workers_count} + {unmatched_pred_workers_count}"
+    assert (
+        len(detailed_worker_records) == evaluated_worker_decisions
+    ), f"Record count mismatch: {len(detailed_worker_records)} vs {evaluated_worker_decisions}"
 
     # Compute Frame-Level Metrics
     frame_metrics = compute_binary_metrics(frame_tp, frame_fp, frame_tn, frame_fn)
@@ -369,29 +419,43 @@ def evaluate_compliance(
     w_fpr_expected = round(worker_fp / (worker_fp + worker_tn), 4)
     w_fnr_expected = round(worker_fn / (worker_tp + worker_fn), 4)
 
-    assert worker_metrics["accuracy"] == w_acc_expected, f"Accuracy mismatch: {worker_metrics['accuracy']} vs {w_acc_expected}"
-    assert worker_metrics["precision"] == w_prec_expected, f"Precision mismatch: {worker_metrics['precision']} vs {w_prec_expected}"
-    assert worker_metrics["recall_sensitivity"] == w_rec_expected, f"Recall mismatch: {worker_metrics['recall_sensitivity']} vs {w_rec_expected}"
-    assert worker_metrics["specificity"] == w_spec_expected, f"Specificity mismatch: {worker_metrics['specificity']} vs {w_spec_expected}"
-    assert worker_metrics["false_positive_rate_fpr"] == w_fpr_expected, f"FPR mismatch: {worker_metrics['false_positive_rate_fpr']} vs {w_fpr_expected}"
-    assert worker_metrics["false_negative_rate_miss_rate"] == w_fnr_expected, f"FNR mismatch: {worker_metrics['false_negative_rate_miss_rate']} vs {w_fnr_expected}"
+    assert (
+        worker_metrics["accuracy"] == w_acc_expected
+    ), f"Accuracy mismatch: {worker_metrics['accuracy']} vs {w_acc_expected}"
+    assert (
+        worker_metrics["precision"] == w_prec_expected
+    ), f"Precision mismatch: {worker_metrics['precision']} vs {w_prec_expected}"
+    assert (
+        worker_metrics["recall_sensitivity"] == w_rec_expected
+    ), f"Recall mismatch: {worker_metrics['recall_sensitivity']} vs {w_rec_expected}"
+    assert (
+        worker_metrics["specificity"] == w_spec_expected
+    ), f"Specificity mismatch: {worker_metrics['specificity']} vs {w_spec_expected}"
+    assert (
+        worker_metrics["false_positive_rate_fpr"] == w_fpr_expected
+    ), f"FPR mismatch: {worker_metrics['false_positive_rate_fpr']} vs {w_fpr_expected}"
+    assert (
+        worker_metrics["false_negative_rate_miss_rate"] == w_fnr_expected
+    ), f"FNR mismatch: {worker_metrics['false_negative_rate_miss_rate']} vs {w_fnr_expected}"
 
     # Per violation category breakdown (Frame-Level)
     per_type_rows = []
     for vname, m in per_type_metrics.items():
         t_metrics = compute_binary_metrics(m["TP"], m["FP"], m["TN"], m["FN"])
-        per_type_rows.append({
-            "violation_type": vname,
-            "TP": m["TP"],
-            "FP": m["FP"],
-            "TN": m["TN"],
-            "FN": m["FN"],
-            "accuracy": t_metrics["accuracy"],
-            "precision": t_metrics["precision"],
-            "recall": t_metrics["recall_sensitivity"],
-            "f1_score": t_metrics["f1_score"],
-            "miss_rate_fnr": t_metrics["false_negative_rate_miss_rate"],
-        })
+        per_type_rows.append(
+            {
+                "violation_type": vname,
+                "TP": m["TP"],
+                "FP": m["FP"],
+                "TN": m["TN"],
+                "FN": m["FN"],
+                "accuracy": t_metrics["accuracy"],
+                "precision": t_metrics["precision"],
+                "recall": t_metrics["recall_sensitivity"],
+                "f1_score": t_metrics["f1_score"],
+                "miss_rate_fnr": t_metrics["false_negative_rate_miss_rate"],
+            }
+        )
     per_type_df = pd.DataFrame(per_type_rows)
 
     # Master compliance report with distinct Frame-Level and Worker-Level scopes and exact accounting
@@ -410,11 +474,17 @@ def evaluate_compliance(
             "metrics": {
                 "frame_violation_decision_accuracy": frame_metrics["accuracy"],
                 "frame_violation_precision": frame_metrics["precision"],
-                "frame_violation_recall_sensitivity": frame_metrics["recall_sensitivity"],
+                "frame_violation_recall_sensitivity": frame_metrics[
+                    "recall_sensitivity"
+                ],
                 "frame_violation_specificity": frame_metrics["specificity"],
                 "frame_violation_f1_score": frame_metrics["f1_score"],
-                "frame_false_positive_rate_fpr": frame_metrics["false_positive_rate_fpr"],
-                "frame_false_negative_rate_fnr": frame_metrics["false_negative_rate_miss_rate"],
+                "frame_false_positive_rate_fpr": frame_metrics[
+                    "false_positive_rate_fpr"
+                ],
+                "frame_false_negative_rate_fnr": frame_metrics[
+                    "false_negative_rate_miss_rate"
+                ],
             },
         },
         "worker_level_evaluation": {
@@ -433,11 +503,17 @@ def evaluate_compliance(
             "metrics": {
                 "worker_compliance_decision_accuracy": worker_metrics["accuracy"],
                 "worker_violation_precision": worker_metrics["precision"],
-                "worker_violation_recall_sensitivity": worker_metrics["recall_sensitivity"],
+                "worker_violation_recall_sensitivity": worker_metrics[
+                    "recall_sensitivity"
+                ],
                 "worker_violation_specificity": worker_metrics["specificity"],
                 "worker_violation_f1_score": worker_metrics["f1_score"],
-                "worker_false_positive_rate_fpr": worker_metrics["false_positive_rate_fpr"],
-                "worker_false_negative_rate_fnr": worker_metrics["false_negative_rate_miss_rate"],
+                "worker_false_positive_rate_fpr": worker_metrics[
+                    "false_positive_rate_fpr"
+                ],
+                "worker_false_negative_rate_fnr": worker_metrics[
+                    "false_negative_rate_miss_rate"
+                ],
             },
         },
         "per_violation_category_metrics": per_type_rows,
@@ -446,20 +522,38 @@ def evaluate_compliance(
     # Save outputs
     save_json_report(compliance_report, out_path / "compliance_metrics.json")
     save_csv_report(per_type_df, out_path / "per_violation_compliance.csv")
-    save_csv_report(pd.DataFrame(detailed_frame_records), out_path / "compliance_frame_decisions.csv")
-    save_csv_report(pd.DataFrame(detailed_worker_records), out_path / "compliance_worker_decisions.csv")
+    save_csv_report(
+        pd.DataFrame(detailed_frame_records),
+        out_path / "compliance_frame_decisions.csv",
+    )
+    save_csv_report(
+        pd.DataFrame(detailed_worker_records),
+        out_path / "compliance_worker_decisions.csv",
+    )
 
     # Print clean formatted console summary
     print("\n" + "=" * 70)
     print(" PPE COMPLIANCE DECISION EVALUATION SUMMARY")
     print("=" * 70)
     print(" [1] FRAME-LEVEL PPE VIOLATION DECISION METRICS (N=82 frames):")
-    print(f"     Accuracy:    {frame_metrics['accuracy']:.4f} ({frame_metrics['accuracy']*100:.2f}%)")
-    print(f"     Precision:   {frame_metrics['precision']:.4f} ({frame_metrics['precision']*100:.2f}%)")
-    print(f"     Recall:      {frame_metrics['recall_sensitivity']:.4f} ({frame_metrics['recall_sensitivity']*100:.2f}%)")
-    print(f"     F1-Score:    {frame_metrics['f1_score']:.4f} ({frame_metrics['f1_score']*100:.2f}%)")
-    print(f"     FPR:         {frame_metrics['false_positive_rate_fpr']:.4f} ({frame_metrics['false_positive_rate_fpr']*100:.2f}%)")
-    print(f"     FNR:         {frame_metrics['false_negative_rate_miss_rate']:.4f} ({frame_metrics['false_negative_rate_miss_rate']*100:.2f}%)")
+    print(
+        f"     Accuracy:    {frame_metrics['accuracy']:.4f} ({frame_metrics['accuracy']*100:.2f}%)"
+    )
+    print(
+        f"     Precision:   {frame_metrics['precision']:.4f} ({frame_metrics['precision']*100:.2f}%)"
+    )
+    print(
+        f"     Recall:      {frame_metrics['recall_sensitivity']:.4f} ({frame_metrics['recall_sensitivity']*100:.2f}%)"
+    )
+    print(
+        f"     F1-Score:    {frame_metrics['f1_score']:.4f} ({frame_metrics['f1_score']*100:.2f}%)"
+    )
+    print(
+        f"     FPR:         {frame_metrics['false_positive_rate_fpr']:.4f} ({frame_metrics['false_positive_rate_fpr']*100:.2f}%)"
+    )
+    print(
+        f"     FNR:         {frame_metrics['false_negative_rate_miss_rate']:.4f} ({frame_metrics['false_negative_rate_miss_rate']*100:.2f}%)"
+    )
     print(f"     CM: TP={frame_tp}, FP={frame_fp}, TN={frame_tn}, FN={frame_fn}")
     print("-" * 70)
     print(f" [2] WORKER-LEVEL PPE COMPLIANCE METRICS:")
@@ -469,22 +563,46 @@ def evaluate_compliance(
     print(f"     Unmatched GT Workers:        {unmatched_gt_workers_count}")
     print(f"     Unmatched Predicted Workers: {unmatched_pred_workers_count}")
     print(f"     Total Evaluated Decisions:   {evaluated_worker_decisions}")
-    print(f"     Confusion Matrix: TP={worker_tp}, FP={worker_fp}, TN={worker_tn}, FN={worker_fn}")
-    print(f"     Accuracy:    {worker_metrics['accuracy']:.4f} ({worker_metrics['accuracy']*100:.2f}%)")
-    print(f"     Precision:   {worker_metrics['precision']:.4f} ({worker_metrics['precision']*100:.2f}%)")
-    print(f"     Recall:      {worker_metrics['recall_sensitivity']:.4f} ({worker_metrics['recall_sensitivity']*100:.2f}%)")
-    print(f"     F1-Score:    {worker_metrics['f1_score']:.4f} ({worker_metrics['f1_score']*100:.2f}%)")
-    print(f"     FPR:         {worker_metrics['false_positive_rate_fpr']:.4f} ({worker_metrics['false_positive_rate_fpr']*100:.2f}%)")
-    print(f"     FNR:         {worker_metrics['false_negative_rate_miss_rate']:.4f} ({worker_metrics['false_negative_rate_miss_rate']*100:.2f}%)")
+    print(
+        f"     Confusion Matrix: TP={worker_tp}, FP={worker_fp}, TN={worker_tn}, FN={worker_fn}"
+    )
+    print(
+        f"     Accuracy:    {worker_metrics['accuracy']:.4f} ({worker_metrics['accuracy']*100:.2f}%)"
+    )
+    print(
+        f"     Precision:   {worker_metrics['precision']:.4f} ({worker_metrics['precision']*100:.2f}%)"
+    )
+    print(
+        f"     Recall:      {worker_metrics['recall_sensitivity']:.4f} ({worker_metrics['recall_sensitivity']*100:.2f}%)"
+    )
+    print(
+        f"     F1-Score:    {worker_metrics['f1_score']:.4f} ({worker_metrics['f1_score']*100:.2f}%)"
+    )
+    print(
+        f"     FPR:         {worker_metrics['false_positive_rate_fpr']:.4f} ({worker_metrics['false_positive_rate_fpr']*100:.2f}%)"
+    )
+    print(
+        f"     FNR:         {worker_metrics['false_negative_rate_miss_rate']:.4f} ({worker_metrics['false_negative_rate_miss_rate']*100:.2f}%)"
+    )
     print("=" * 70 + "\n")
 
     return compliance_report
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AEGIS-AI Compliance Decision Engine Evaluation")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
-    parser.add_argument("--split", type=str, default="test", choices=["test", "valid"], help="Dataset split to evaluate")
+    parser = argparse.ArgumentParser(
+        description="AEGIS-AI Compliance Decision Engine Evaluation"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["test", "valid"],
+        help="Dataset split to evaluate",
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
     args = parser.parse_args()
 

@@ -1,8 +1,10 @@
 """
 AEGIS — Structured Application Logger
 """
+
 import logging
 import sys
+
 
 def get_logger(name: str = "AEGIS") -> logging.Logger:
     """Create or return structured logger."""
@@ -11,7 +13,7 @@ def get_logger(name: str = "AEGIS") -> logging.Logger:
         logger.setLevel(logging.INFO)
         formatter = logging.Formatter(
             "[%(asctime)s] [%(levelname)s] [%(name)s]: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
         handler = logging.StreamHandler(sys.stdout)
         handler.setFormatter(formatter)

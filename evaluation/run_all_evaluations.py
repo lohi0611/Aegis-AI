@@ -3,10 +3,10 @@ AEGIS-AI — Master Evaluation & Research Report Generation Suite
 Executes all evaluation modules, collects quantitative metrics, and generates
 a comprehensive, IEEE-ready experimental results summary report.
 """
-import os
+
+import argparse
 import sys
 import time
-import argparse
 from pathlib import Path
 
 # Add parent directory to sys.path
@@ -15,18 +15,18 @@ REPO_ROOT = SCRIPT_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from evaluation.benchmark_realtime import benchmark_realtime
+from evaluation.compare_models import compare_models
+from evaluation.cross_validation import evaluate_cross_validation_folds
+from evaluation.error_analysis import run_error_analysis
+from evaluation.evaluate_compliance import evaluate_compliance
+from evaluation.evaluate_model import evaluate_model
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
+    load_eval_config,
     save_json_report,
 )
-from evaluation.evaluate_model import evaluate_model
-from evaluation.benchmark_realtime import benchmark_realtime
-from evaluation.evaluate_compliance import evaluate_compliance
-from evaluation.error_analysis import run_error_analysis
-from evaluation.cross_validation import evaluate_cross_validation_folds
-from evaluation.compare_models import compare_models
 
 
 def generate_markdown_report(all_results: dict, output_file: Path):
@@ -79,33 +79,35 @@ def generate_markdown_report(all_results: dict, output_file: Path):
             f"{lat_m.get('mean_inference_ms', 0):.2f} | {res_m.get('process_ram_mb', 0):.1f} |"
         )
 
-    md_lines.extend([
-        "",
-        "---",
-        "",
-        "### 3. Compliance Decision Confusion Matrix",
-        "",
-        f"- **True Positives (Correctly Flagged Violations):** {comp_cm.get('TP_correct_violations', 0)}",
-        f"- **False Positives (False Alarms on Compliant Workers):** {comp_cm.get('FP_false_alarms', 0)}",
-        f"- **True Negatives (Correctly Verified Compliant Workers):** {comp_cm.get('TN_correct_compliant', 0)}",
-        f"- **False Negatives (Critical Missed Hazards):** {comp_cm.get('FN_missed_hazards', 0)}",
-        "",
-        "---",
-        "",
-        "### 4. Machine-Readable Result File Index",
-        "",
-        "- Detection Metrics: `evaluation/results/detection/metrics.json`",
-        "- Per-Class Metrics: `evaluation/results/detection/per_class_metrics.csv`",
-        "- Performance Benchmarks: `evaluation/results/performance/realtime_benchmark.json`",
-        "- Frame-by-Frame Latency: `evaluation/results/performance/realtime_benchmark_frames.csv`",
-        "- Compliance Metrics: `evaluation/results/compliance/compliance_metrics.json`",
-        "- Per-Violation Metrics: `evaluation/results/compliance/per_violation_compliance.csv`",
-        "- Error Diagnostics: `evaluation/results/error_analysis/error_breakdown.json`",
-        "- Scale Sensitivity: `evaluation/results/error_analysis/scale_sensitivity.csv`",
-        "- Cross-Validation / Splits: `evaluation/results/cross_validation/cross_val_summary.json`",
-        "- Model Comparison: `evaluation/results/model_comparison/model_comparison.csv`",
-        "",
-    ])
+    md_lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "### 3. Compliance Decision Confusion Matrix",
+            "",
+            f"- **True Positives (Correctly Flagged Violations):** {comp_cm.get('TP_correct_violations', 0)}",
+            f"- **False Positives (False Alarms on Compliant Workers):** {comp_cm.get('FP_false_alarms', 0)}",
+            f"- **True Negatives (Correctly Verified Compliant Workers):** {comp_cm.get('TN_correct_compliant', 0)}",
+            f"- **False Negatives (Critical Missed Hazards):** {comp_cm.get('FN_missed_hazards', 0)}",
+            "",
+            "---",
+            "",
+            "### 4. Machine-Readable Result File Index",
+            "",
+            "- Detection Metrics: `evaluation/results/detection/metrics.json`",
+            "- Per-Class Metrics: `evaluation/results/detection/per_class_metrics.csv`",
+            "- Performance Benchmarks: `evaluation/results/performance/realtime_benchmark.json`",
+            "- Frame-by-Frame Latency: `evaluation/results/performance/realtime_benchmark_frames.csv`",
+            "- Compliance Metrics: `evaluation/results/compliance/compliance_metrics.json`",
+            "- Per-Violation Metrics: `evaluation/results/compliance/per_violation_compliance.csv`",
+            "- Error Diagnostics: `evaluation/results/error_analysis/error_breakdown.json`",
+            "- Scale Sensitivity: `evaluation/results/error_analysis/scale_sensitivity.csv`",
+            "- Cross-Validation / Splits: `evaluation/results/cross_validation/cross_val_summary.json`",
+            "- Model Comparison: `evaluation/results/model_comparison/model_comparison.csv`",
+            "",
+        ]
+    )
 
     with open(output_file, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines))
@@ -204,7 +206,7 @@ def run_all(config_path: str = None, device: str = None):
     # Save comprehensive reports
     base_out = Path(cfg["output_dirs"]["base"])
     ensure_dir(base_out)
-    
+
     save_json_report(results, base_out / "comprehensive_summary.json")
     generate_markdown_report(results, base_out / "RESEARCH_EVALUATION_REPORT.md")
 
@@ -216,7 +218,9 @@ def run_all(config_path: str = None, device: str = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="AEGIS-AI Run All Evaluations")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
     parser.add_argument("--device", type=str, default=None, help="Device (cpu or 0)")
     args = parser.parse_args()
 

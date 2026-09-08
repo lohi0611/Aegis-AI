@@ -2,26 +2,33 @@
 AEGIS — Unit Tests for Database Layer
 Tests session creation, violation logging, close_session, and analytics queries using an in-memory SQLite DB.
 """
+
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pytest
 from datetime import datetime
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 from src.database.models import Base, ScanSession, ViolationEvent
 
 
 def make_test_engine():
     """Create in-memory SQLite engine for isolated testing."""
-    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        "sqlite:///:memory:", connect_args={"check_same_thread": False}
+    )
     Base.metadata.create_all(bind=engine)
     return engine
 
 
 def make_test_session(engine):
-    SessionLocal = scoped_session(sessionmaker(bind=engine, autocommit=False, autoflush=False))
+    SessionLocal = scoped_session(
+        sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    )
     return SessionLocal
 
 
@@ -36,7 +43,12 @@ class TestScanSessionModel:
 
     def test_create_session(self):
         db = self.Session()
-        s = ScanSession(scan_type="camera", source_name="Test Camera", status="running", start_time=datetime.utcnow())
+        s = ScanSession(
+            scan_type="camera",
+            source_name="Test Camera",
+            status="running",
+            start_time=datetime.utcnow(),
+        )
         db.add(s)
         db.commit()
         assert s.session_id is not None
@@ -54,7 +66,9 @@ class TestScanSessionModel:
 
     def test_session_to_dict_structure(self):
         db = self.Session()
-        s = ScanSession(scan_type="camera", start_time=datetime.utcnow(), status="completed")
+        s = ScanSession(
+            scan_type="camera", start_time=datetime.utcnow(), status="completed"
+        )
         db.add(s)
         db.commit()
         d = s.to_dict()

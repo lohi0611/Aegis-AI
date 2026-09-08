@@ -3,13 +3,15 @@ AEGIS-AI — Model Variant Architecture & Speed-Accuracy Trade-off Comparison
 Compares model variants on size (MB), parameter count, mAP@50, mAP@50-95,
 precision, recall, F1, and real-time FPS throughput.
 """
+
+import argparse
 import os
 import sys
 import time
-import argparse
 from pathlib import Path
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 from ultralytics import YOLO
 
 # Add parent directory to sys.path
@@ -19,11 +21,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
 
 
@@ -44,7 +46,15 @@ def compare_models(
     if model_paths is None:
         model_paths = {
             "YOLOv8n-PPE (Custom Trained)": str(REPO_ROOT / "models" / "yolov8_ppe.pt"),
-            "YOLOv8n (Pretrained Baseline)": str(REPO_ROOT / "infosys" / "dataset" / "results_yolov8n_100e" / "kaggle" / "working" / "yolov8n.pt"),
+            "YOLOv8n (Pretrained Baseline)": str(
+                REPO_ROOT
+                / "infosys"
+                / "dataset"
+                / "results_yolov8n_100e"
+                / "kaggle"
+                / "working"
+                / "yolov8n.pt"
+            ),
         }
 
     if data_yaml is None:
@@ -68,13 +78,19 @@ def compare_models(
         file_size_mb = round(os.path.getsize(m_path) / (1024 * 1024), 2)
 
         model = YOLO(m_path)
-        
+
         # Get parameter count if model structure is loaded
-        param_count = sum(p.numel() for p in model.model.parameters()) if hasattr(model, "model") and model.model else 0
+        param_count = (
+            sum(p.numel() for p in model.model.parameters())
+            if hasattr(model, "model") and model.model
+            else 0
+        )
         param_count_m = round(param_count / 1e6, 2)
 
         try:
-            val_res = model.val(data=data_yaml, split=split, device=device, verbose=False)
+            val_res = model.val(
+                data=data_yaml, split=split, device=device, verbose=False
+            )
             m_dict = val_res.results_dict
 
             p = float(m_dict.get("metrics/precision(B)", 0.0))
@@ -93,25 +109,31 @@ def compare_models(
             # Benchmark speed on dummy/sample tensor if class heads differ
             t0 = time.perf_counter()
             for _ in range(20):
-                _ = model.predict(np.zeros((imgsz, imgsz, 3), dtype=np.uint8), device=device, verbose=False)
+                _ = model.predict(
+                    np.zeros((imgsz, imgsz, 3), dtype=np.uint8),
+                    device=device,
+                    verbose=False,
+                )
             t_total = (time.perf_counter() - t0) / 20.0 * 1000.0
             p, r, f1, m50, m50_95 = 0.0, 0.0, 0.0, 0.0, 0.0
             inf_ms, e2e_ms = t_total, t_total
             fps = round(1000.0 / e2e_ms, 2) if e2e_ms > 0 else 0.0
 
-        comparison_records.append({
-            "model_name": name,
-            "file_size_mb": file_size_mb,
-            "params_millions": param_count_m,
-            "precision": round(p, 4),
-            "recall": round(r, 4),
-            "f1_score": round(f1, 4),
-            "mAP50": round(m50, 4),
-            "mAP50_95": round(m50_95, 4),
-            "inference_latency_ms": round(inf_ms, 2),
-            "e2e_latency_ms": round(e2e_ms, 2),
-            "throughput_fps": fps,
-        })
+        comparison_records.append(
+            {
+                "model_name": name,
+                "file_size_mb": file_size_mb,
+                "params_millions": param_count_m,
+                "precision": round(p, 4),
+                "recall": round(r, 4),
+                "f1_score": round(f1, 4),
+                "mAP50": round(m50, 4),
+                "mAP50_95": round(m50_95, 4),
+                "inference_latency_ms": round(inf_ms, 2),
+                "e2e_latency_ms": round(e2e_ms, 2),
+                "throughput_fps": fps,
+            }
+        )
 
     comp_df = pd.DataFrame(comparison_records)
 
@@ -139,13 +161,17 @@ def compare_models(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AEGIS-AI Model Architecture & Speed-Accuracy Comparison")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
+    parser = argparse.ArgumentParser(
+        description="AEGIS-AI Model Architecture & Speed-Accuracy Comparison"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
     args = parser.parse_args()
 
     cfg = load_eval_config(args.config)
-    
+
     compare_models(
         data_yaml=cfg["dataset"]["yaml_path"],
         split=cfg["detection_eval"]["split"],

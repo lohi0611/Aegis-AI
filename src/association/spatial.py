@@ -3,8 +3,8 @@ AEGIS — Person-to-PPE Spatial Association Engine
 Associates detected PPE items (Hardhat, Mask, Vest, NO-Hardhat, NO-Mask, NO-Safety Vest)
 with individual detected workers based on geometric containment, IoU overlap, and anatomical alignment.
 """
-from typing import List, Dict, Any, Tuple, Optional
-import numpy as np
+
+from typing import Any, Dict, List, Tuple
 
 
 def compute_bbox_area(box: List[float]) -> float:
@@ -48,7 +48,9 @@ def compute_iou(boxA: List[float], boxB: List[float]) -> float:
     return inter_area / union_area
 
 
-def compute_anatomical_score(ppe_class: str, ppe_box: List[float], person_box: List[float]) -> float:
+def compute_anatomical_score(
+    ppe_class: str, ppe_box: List[float], person_box: List[float]
+) -> float:
     """
     Check if PPE center vertically aligns with human anatomy within the person bounding box.
     - Head equipment (Hardhat, NO-Hardhat, Mask, NO-Mask): expected in upper 45% of height.
@@ -57,7 +59,7 @@ def compute_anatomical_score(ppe_class: str, ppe_box: List[float], person_box: L
     person_h = person_box[3] - person_box[1]
     if person_h <= 0.0:
         return 0.5
-    
+
     ppe_cy = (ppe_box[1] + ppe_box[3]) / 2.0
     rel_y = (ppe_cy - person_box[1]) / person_h  # 0.0 = top of head, 1.0 = feet
 
@@ -85,6 +87,7 @@ class SpatialPPEAssociator:
     """
     Associates object-level PPE detections to worker detections.
     """
+
     def __init__(
         self,
         containment_threshold: float = 0.35,
@@ -104,11 +107,11 @@ class SpatialPPEAssociator:
     ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
         Associate PPE detections to person detections.
-        
+
         Args:
             person_detections: List of dicts with keys 'bbox', 'track_id', 'confidence'
             ppe_detections: List of dicts with keys 'class_name', 'bbox', 'confidence'
-            
+
         Returns:
             Tuple of:
               1. List of worker dicts, each with attached 'assigned_ppe' list.
@@ -117,12 +120,14 @@ class SpatialPPEAssociator:
         # Deep clone person records
         workers = []
         for p in person_detections:
-            workers.append({
-                "track_id": p.get("track_id", "Unknown"),
-                "bbox": p["bbox"],
-                "confidence": p.get("confidence", 1.0),
-                "assigned_ppe": [],
-            })
+            workers.append(
+                {
+                    "track_id": p.get("track_id", "Unknown"),
+                    "bbox": p["bbox"],
+                    "confidence": p.get("confidence", 1.0),
+                    "assigned_ppe": [],
+                }
+            )
 
         unassigned_ppe = []
 
@@ -133,21 +138,21 @@ class SpatialPPEAssociator:
         for ppe in ppe_detections:
             ppe_box = ppe["bbox"]
             ppe_cls = ppe["class_name"]
-            
+
             best_worker_idx = -1
             best_score = -1.0
 
             for idx, worker in enumerate(workers):
                 person_box = worker["bbox"]
                 containment = compute_containment_ratio(ppe_box, person_box)
-                
+
                 if containment >= self.containment_threshold:
                     iou = compute_iou(ppe_box, person_box)
                     anat = compute_anatomical_score(ppe_cls, ppe_box, person_box)
                     score = (
-                        self.containment_weight * containment +
-                        self.iou_weight * iou +
-                        self.anatomical_weight * anat
+                        self.containment_weight * containment
+                        + self.iou_weight * iou
+                        + self.anatomical_weight * anat
                     )
                     if score > best_score:
                         best_score = score

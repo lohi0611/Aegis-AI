@@ -1,6 +1,7 @@
 """
 AEGIS Utilities Package
 """
+
 from src.utils.logger import get_logger
 from src.utils.telemetry import PerformanceTimer
 

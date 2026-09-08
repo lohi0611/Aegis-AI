@@ -2,13 +2,15 @@
 AEGIS — PPE Compliance Rule Definitions
 Evaluates worker PPE states against site safety policies.
 """
-from typing import List, Dict, Any, Set, Tuple
+
+from typing import Any, Dict, List
 
 
 class PPERuleEngine:
     """
     Formal rule engine evaluating worker compliance based on detected and negative PPE classes.
     """
+
     def __init__(
         self,
         require_hardhat: bool = True,
@@ -22,20 +24,20 @@ class PPERuleEngine:
     def evaluate_worker(self, worker_record: Dict[str, Any]) -> Dict[str, Any]:
         """
         Evaluate compliance for a single worker with associated PPE detections.
-        
+
         Args:
             worker_record: Dict containing 'track_id', 'bbox', 'assigned_ppe', 'confidence'
-            
+
         Returns:
             Dict containing worker compliance evaluation status.
         """
         assigned_ppe = worker_record.get("assigned_ppe", [])
         ppe_classes = {p["class_name"] for p in assigned_ppe}
-        
+
         violations: List[str] = []
         detected_ppe: List[str] = []
         missing_ppe: List[str] = []
-        
+
         # 1. Hardhat Rule
         if "NO-Hardhat" in ppe_classes:
             violations.append("NO-Hardhat")

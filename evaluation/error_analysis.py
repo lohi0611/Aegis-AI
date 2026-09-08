@@ -3,12 +3,12 @@ AEGIS-AI — Error Analysis and Failure Mode Diagnostics
 Categorizes false positives, false negatives, scale/resolution sensitivity,
 and confidence distributions across dataset splits.
 """
-import os
-import sys
+
 import argparse
+import sys
 from pathlib import Path
+
 import cv2
-import numpy as np
 import pandas as pd
 from ultralytics import YOLO
 
@@ -19,11 +19,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
 
 
@@ -38,7 +38,11 @@ def compute_iou(boxA, boxB):
     boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
     boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
 
-    iou = interArea / float(boxAArea + boxBArea - interArea) if (boxAArea + boxBArea - interArea) > 0 else 0.0
+    iou = (
+        interArea / float(boxAArea + boxBArea - interArea)
+        if (boxAArea + boxBArea - interArea) > 0
+        else 0.0
+    )
     return iou
 
 
@@ -90,7 +94,10 @@ def run_error_analysis(
         "0.70 - 1.00 (High)": 0,
     }
 
-    per_class_errors = {cname: {"GT": 0, "Detected": 0, "Missed": 0, "FalseAlarms": 0} for cname in class_mapping.values()}
+    per_class_errors = {
+        cname: {"GT": 0, "Detected": 0, "Missed": 0, "FalseAlarms": 0}
+        for cname in class_mapping.values()
+    }
 
     for img_path in img_files:
         lbl_path = lbl_dir / f"{img_path.stem}.txt"
@@ -113,18 +120,28 @@ def run_error_analysis(
                         x2 = (cx + bw / 2.0) * w
                         y2 = (cy + bh / 2.0) * h
                         area = (x2 - x1) * (y2 - y1)
-                        gt_items.append({
-                            "cls_id": cls_id,
-                            "cls_name": class_mapping.get(cls_id, f"Class_{cls_id}"),
-                            "box": [x1, y1, x2, y2],
-                            "area": area,
-                            "matched": False,
-                        })
+                        gt_items.append(
+                            {
+                                "cls_id": cls_id,
+                                "cls_name": class_mapping.get(
+                                    cls_id, f"Class_{cls_id}"
+                                ),
+                                "box": [x1, y1, x2, y2],
+                                "area": area,
+                                "matched": False,
+                            }
+                        )
 
         total_gt_boxes += len(gt_items)
 
         # Run Prediction
-        results = model.predict(str(img_path), conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+        results = model.predict(
+            str(img_path),
+            conf=conf_thresh,
+            iou=iou_thresh,
+            device=device,
+            verbose=False,
+        )
         boxes = results[0].boxes
         total_pred_boxes += len(boxes)
 
@@ -133,13 +150,15 @@ def run_error_analysis(
             p_cls_id = int(b.cls[0])
             p_conf = float(b.conf[0])
             p_box = b.xyxy[0].tolist()
-            pred_items.append({
-                "cls_id": p_cls_id,
-                "cls_name": class_mapping.get(p_cls_id, f"Class_{p_cls_id}"),
-                "conf": p_conf,
-                "box": p_box,
-                "matched": False,
-            })
+            pred_items.append(
+                {
+                    "cls_id": p_cls_id,
+                    "cls_name": class_mapping.get(p_cls_id, f"Class_{p_cls_id}"),
+                    "conf": p_conf,
+                    "box": p_box,
+                    "matched": False,
+                }
+            )
 
             # Tally confidence
             if p_conf < 0.40:
@@ -170,12 +189,14 @@ def run_error_analysis(
                 for gt in gt_items:
                     iou = compute_iou(pred["box"], gt["box"])
                     if iou >= 0.50 and gt["cls_id"] != pred["cls_id"]:
-                        class_confusions.append({
-                            "gt_class": gt["cls_name"],
-                            "pred_class": pred["cls_name"],
-                            "conf": round(pred["conf"], 3),
-                            "image": img_path.name,
-                        })
+                        class_confusions.append(
+                            {
+                                "gt_class": gt["cls_name"],
+                                "pred_class": pred["cls_name"],
+                                "conf": round(pred["conf"], 3),
+                                "image": img_path.name,
+                            }
+                        )
                 false_positives += 1
                 per_class_errors[pred["cls_name"]]["FalseAlarms"] += 1
 
@@ -204,13 +225,15 @@ def run_error_analysis(
         tot = s["total_gt"]
         det = s["detected"]
         recall_pct = round((det / tot) * 100, 2) if tot > 0 else 0.0
-        scale_rows.append({
-            "Object Scale": scale_name,
-            "Total Ground Truth": tot,
-            "Successfully Detected": det,
-            "Missed Objects (FN)": s["missed"],
-            "Detection Recall (%)": recall_pct,
-        })
+        scale_rows.append(
+            {
+                "Object Scale": scale_name,
+                "Total Ground Truth": tot,
+                "Successfully Detected": det,
+                "Missed Objects (FN)": s["missed"],
+                "Detection Recall (%)": recall_pct,
+            }
+        )
     scale_df = pd.DataFrame(scale_rows)
 
     # Format per-class error table
@@ -220,14 +243,16 @@ def run_error_analysis(
         missed = stats["Missed"]
         fa = stats["FalseAlarms"]
         rec = round(((gt_tot - missed) / gt_tot) * 100, 2) if gt_tot > 0 else 0.0
-        class_error_rows.append({
-            "Class Name": cname,
-            "Total GT": gt_tot,
-            "Detected": stats["Detected"],
-            "Missed (FN)": missed,
-            "False Alarms (FP)": fa,
-            "Recall (%)": rec,
-        })
+        class_error_rows.append(
+            {
+                "Class Name": cname,
+                "Total GT": gt_tot,
+                "Detected": stats["Detected"],
+                "Missed (FN)": missed,
+                "False Alarms (FP)": fa,
+                "Recall (%)": rec,
+            }
+        )
     class_error_df = pd.DataFrame(class_error_rows)
 
     # Error breakdown summary
@@ -277,9 +302,19 @@ def run_error_analysis(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AEGIS-AI Error Analysis and Diagnostics")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
-    parser.add_argument("--split", type=str, default="test", choices=["test", "valid"], help="Dataset split to evaluate")
+    parser = argparse.ArgumentParser(
+        description="AEGIS-AI Error Analysis and Diagnostics"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["test", "valid"],
+        help="Dataset split to evaluate",
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
     args = parser.parse_args()
 

@@ -2,16 +2,20 @@
 AEGIS — Unit Tests for Research Metrics, Confusion Matrices, and Evaluation Logic
 Ensures mathematical consistency of all reported metrics without requiring a GPU or model weights.
 """
+
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pytest
 import numpy as np
+import pytest
+
 from evaluation.evaluate_compliance import compute_binary_metrics
-from src.association.spatial import SpatialPPEAssociator, compute_iou, compute_containment_ratio
+from src.association.spatial import (
+    SpatialPPEAssociator,
+)
 from src.compliance.rules import PPERuleEngine
-from src.alerts.manager import AlertManager
 
 
 class TestConfusionMatrixMath:
@@ -25,13 +29,23 @@ class TestConfusionMatrixMath:
         assert m["recall_sensitivity"] == pytest.approx(44 / 48, abs=1e-4)  # 0.9167
         assert m["specificity"] == pytest.approx(33 / 34, abs=1e-4)  # 0.9706
         assert m["false_positive_rate_fpr"] == pytest.approx(1 / 34, abs=1e-4)  # 0.0294
-        assert m["false_negative_rate_miss_rate"] == pytest.approx(4 / 48, abs=1e-4)  # 0.0833
+        assert m["false_negative_rate_miss_rate"] == pytest.approx(
+            4 / 48, abs=1e-4
+        )  # 0.0833
 
         # Formula checks
-        expected_f1 = 2 * (m["precision"] * m["recall_sensitivity"]) / (m["precision"] + m["recall_sensitivity"])
+        expected_f1 = (
+            2
+            * (m["precision"] * m["recall_sensitivity"])
+            / (m["precision"] + m["recall_sensitivity"])
+        )
         assert m["f1_score"] == pytest.approx(expected_f1, abs=1e-4)
-        assert m["false_positive_rate_fpr"] + m["specificity"] == pytest.approx(1.0, abs=1e-4)
-        assert m["recall_sensitivity"] + m["false_negative_rate_miss_rate"] == pytest.approx(1.0, abs=1e-4)
+        assert m["false_positive_rate_fpr"] + m["specificity"] == pytest.approx(
+            1.0, abs=1e-4
+        )
+        assert m["recall_sensitivity"] + m[
+            "false_negative_rate_miss_rate"
+        ] == pytest.approx(1.0, abs=1e-4)
 
     def test_worker_level_confusion_matrix_consistency(self):
         """Verify the exact empirical Worker-Level confusion matrix: 94 TP, 19 FP, 47 TN, 30 FN."""
@@ -41,12 +55,22 @@ class TestConfusionMatrixMath:
         total = 94 + 19 + 47 + 30  # 190 total worker evaluations
         assert m["accuracy"] == pytest.approx((94 + 47) / total, abs=1e-4)  # 0.7421
         assert m["precision"] == pytest.approx(94 / (94 + 19), abs=1e-4)  # 0.8319
-        assert m["recall_sensitivity"] == pytest.approx(94 / (94 + 30), abs=1e-4)  # 0.7581
+        assert m["recall_sensitivity"] == pytest.approx(
+            94 / (94 + 30), abs=1e-4
+        )  # 0.7581
         assert m["specificity"] == pytest.approx(47 / (47 + 19), abs=1e-4)  # 0.7121
-        assert m["false_positive_rate_fpr"] == pytest.approx(19 / (47 + 19), abs=1e-4)  # 0.2879
-        assert m["false_negative_rate_miss_rate"] == pytest.approx(30 / (94 + 30), abs=1e-4)  # 0.2419
+        assert m["false_positive_rate_fpr"] == pytest.approx(
+            19 / (47 + 19), abs=1e-4
+        )  # 0.2879
+        assert m["false_negative_rate_miss_rate"] == pytest.approx(
+            30 / (94 + 30), abs=1e-4
+        )  # 0.2419
 
-        expected_f1 = 2 * (m["precision"] * m["recall_sensitivity"]) / (m["precision"] + m["recall_sensitivity"])
+        expected_f1 = (
+            2
+            * (m["precision"] * m["recall_sensitivity"])
+            / (m["precision"] + m["recall_sensitivity"])
+        )
         assert m["f1_score"] == pytest.approx(expected_f1, abs=1e-4)
 
     def test_zero_division_safety(self):
@@ -61,12 +85,25 @@ class TestConfusionMatrixMath:
 class TestDetectionMetricSeparation:
     def test_overall_map_not_overwritten_by_class_map(self):
         """Ensure overall mAP50_95 is distinct from individual class mAPs."""
-        per_class_maps = [0.6463, 0.5580, 0.4019, 0.4144, 0.5683, 0.5590, 0.2847, 0.6203, 0.6903, 0.5301]
+        per_class_maps = [
+            0.6463,
+            0.5580,
+            0.4019,
+            0.4144,
+            0.5683,
+            0.5590,
+            0.2847,
+            0.6203,
+            0.6903,
+            0.5301,
+        ]
         overall_map50_95 = 0.5273  # Computed across all boxes
 
         # The last class is vehicle (0.5301), which must NOT equal the overall model metric (0.5273)
         assert per_class_maps[-1] != overall_map50_95
-        assert round(float(np.mean(per_class_maps)), 4) == pytest.approx(0.5273, abs=0.01)
+        assert round(float(np.mean(per_class_maps)), 4) == pytest.approx(
+            0.5273, abs=0.01
+        )
 
     def test_f1_harmonic_mean(self):
         """Verify F1 is the true harmonic mean of precision and recall."""
@@ -110,7 +147,9 @@ class TestScaleSensitivityCalculation:
             "large": {"total": 237, "detected": 228},
         }
 
-        recalls = {k: round((v["detected"] / v["total"]) * 100, 2) for k, v in scales.items()}
+        recalls = {
+            k: round((v["detected"] / v["total"]) * 100, 2) for k, v in scales.items()
+        }
 
         assert recalls["small"] == 58.54
         assert recalls["medium"] == 82.05
@@ -134,7 +173,11 @@ class TestWorkerAssociationLogic:
         # Hardhat 1 on Worker 1's head, NO-Hardhat 2 on Worker 2's head
         ppe = [
             {"class_name": "Hardhat", "bbox": [20, 55, 90, 110], "confidence": 0.9},
-            {"class_name": "NO-Hardhat", "bbox": [210, 55, 280, 110], "confidence": 0.85},
+            {
+                "class_name": "NO-Hardhat",
+                "bbox": [210, 55, 280, 110],
+                "confidence": 0.85,
+            },
         ]
 
         workers, isolated = associator.associate(persons, ppe)
@@ -200,8 +243,19 @@ class TestAblationConfiguration:
             "A0": ["detector"],
             "A1": ["detector", "spatial_association"],
             "A2": ["detector", "spatial_association", "centroid_tracking"],
-            "A3": ["detector", "spatial_association", "centroid_tracking", "temporal_hysteresis"],
-            "A4": ["detector", "spatial_association", "centroid_tracking", "temporal_hysteresis", "cooldown_throttling"],
+            "A3": [
+                "detector",
+                "spatial_association",
+                "centroid_tracking",
+                "temporal_hysteresis",
+            ],
+            "A4": [
+                "detector",
+                "spatial_association",
+                "centroid_tracking",
+                "temporal_hysteresis",
+                "cooldown_throttling",
+            ],
         }
         for i in range(len(configs) - 1):
             curr_c = components[configs[i]]
@@ -209,4 +263,3 @@ class TestAblationConfiguration:
             # Each subsequent config is a strict superset of the previous
             assert set(curr_c).issubset(set(next_c))
             assert len(next_c) == len(curr_c) + 1
-

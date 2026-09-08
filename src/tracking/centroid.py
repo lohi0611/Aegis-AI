@@ -2,14 +2,15 @@
 AEGIS — Centroid Tracking Module
 Maintains persistent worker identities across video frames using Euclidean centroid association.
 """
-from typing import List, Dict, Tuple, Optional
-import numpy as np
+
+from typing import Dict, List, Optional, Tuple
 
 
 class CentroidTracker:
     """
     Centroid tracker assigning stable worker IDs across sequential video frames.
     """
+
     def __init__(
         self,
         max_disappeared: int = 15,
@@ -27,7 +28,9 @@ class CentroidTracker:
         self.min_distance = min_distance
         self.prefix = track_id_prefix
 
-    def register(self, centroid: Tuple[int, int], class_name: str, bbox: List[int]) -> str:
+    def register(
+        self, centroid: Tuple[int, int], class_name: str, bbox: List[int]
+    ) -> str:
         """Register a new object track."""
         w_id = f"{self.prefix}{self.next_id}"
         self.objects[w_id] = centroid
@@ -45,11 +48,11 @@ class CentroidTracker:
     def update(self, rects: List[List[int]], class_names: List[str]) -> List[str]:
         """
         Update object tracks based on input bounding boxes.
-        
+
         Args:
             rects: List of [x1, y1, x2, y2]
             class_names: List of class name strings aligned with rects
-            
+
         Returns:
             List of track IDs assigned to each input box.
         """
@@ -61,8 +64,7 @@ class CentroidTracker:
             return []
 
         input_centroids = [
-            ((int(r[0]) + int(r[2])) // 2, (int(r[1]) + int(r[3])) // 2)
-            for r in rects
+            ((int(r[0]) + int(r[2])) // 2, (int(r[1]) + int(r[3])) // 2) for r in rects
         ]
 
         if len(self.objects) == 0:

@@ -2,10 +2,12 @@
 AEGIS — Configuration Loader Module
 Provides typed dictionary configuration loading from YAML with environment variable overrides.
 """
+
 import os
-import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -35,7 +37,9 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     if "AEGIS_DEVICE" in os.environ:
         cfg.setdefault("model", {})["device"] = os.environ["AEGIS_DEVICE"]
     if "AEGIS_CONF_THRESH" in os.environ:
-        cfg.setdefault("model", {})["conf_threshold"] = float(os.environ["AEGIS_CONF_THRESH"])
+        cfg.setdefault("model", {})["conf_threshold"] = float(
+            os.environ["AEGIS_CONF_THRESH"]
+        )
     if "DATABASE_URL" in os.environ:
         cfg.setdefault("database", {})["url"] = os.environ["DATABASE_URL"]
     if "AEGIS_MODEL_PATH" in os.environ:

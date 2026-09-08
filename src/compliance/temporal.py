@@ -3,13 +3,15 @@ AEGIS — Temporal Hysteresis Filter
 Suppresses single-frame detector flicker and transient occlusion.
 Requires N consecutive frames to confirm a violation event, and M frames to resolve it.
 """
-from typing import Dict, Any, List, Set, Optional
+
+from typing import Any, Dict, List
 
 
 class TemporalHysteresisFilter:
     """
     Stateful temporal confirmation filter for worker safety violations.
     """
+
     def __init__(
         self,
         violation_confirm_frames: int = 3,
@@ -24,10 +26,10 @@ class TemporalHysteresisFilter:
     def update(self, evaluated_workers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
         Process worker compliance states through the temporal hysteresis window.
-        
+
         Args:
             evaluated_workers: Output from PPERuleEngine.evaluate_worker
-            
+
         Returns:
             List of stabilized worker records with 'temporally_confirmed' flag.
         """
@@ -51,13 +53,13 @@ class TemporalHysteresisFilter:
             if len(instant_violations) > 0:
                 state["consecutive_violations"] += 1
                 state["consecutive_clean"] = 0
-                
+
                 # Check confirmation threshold
                 if state["consecutive_violations"] >= self.violation_confirm_frames:
                     state["confirmed_violations"] = instant_violations
             else:
                 state["consecutive_clean"] += 1
-                
+
                 # Check resolution threshold
                 if state["consecutive_clean"] >= self.resolution_confirm_frames:
                     state["confirmed_violations"] = set()
@@ -65,7 +67,7 @@ class TemporalHysteresisFilter:
 
             # Formulate stabilized record
             is_confirmed_violation = len(state["confirmed_violations"]) > 0
-            
+
             w_copy = dict(w)
             w_copy["temporally_confirmed"] = is_confirmed_violation
             w_copy["confirmed_violations"] = sorted(list(state["confirmed_violations"]))
@@ -73,7 +75,7 @@ class TemporalHysteresisFilter:
                 "consecutive_violations": state["consecutive_violations"],
                 "consecutive_clean": state["consecutive_clean"],
             }
-            
+
             # If confirmed violation, update status
             if is_confirmed_violation:
                 w_copy["status"] = "Violation"

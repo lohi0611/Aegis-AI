@@ -4,16 +4,17 @@ Accurately benchmarks inference latency (preprocess, forward-pass, NMS postproce
 end-to-end throughput (FPS), hardware utilization, and resolution scaling.
 Computes Mean, Median, Std, Min, Max, and 95th percentile metrics over N frames.
 """
+
+import argparse
 import os
 import sys
 import time
-import argparse
 from pathlib import Path
+
 import cv2
 import numpy as np
 import pandas as pd
 import psutil
-import torch
 from ultralytics import YOLO
 
 # Add parent directory to sys.path
@@ -23,11 +24,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
 
 
@@ -77,9 +78,13 @@ def benchmark_realtime(
 
     if not sample_frames:
         # Fallback to test dataset images or synthetic frame
-        test_img_dir = REPO_ROOT / "infosys" / "dataset" / "css-data" / "test" / "images"
+        test_img_dir = (
+            REPO_ROOT / "infosys" / "dataset" / "css-data" / "test" / "images"
+        )
         if test_img_dir.exists():
-            img_files = list(test_img_dir.glob("*.jpg")) + list(test_img_dir.glob("*.png"))
+            img_files = list(test_img_dir.glob("*.jpg")) + list(
+                test_img_dir.glob("*.png")
+            )
             for p in img_files[:num_frames]:
                 img = cv2.imread(str(p))
                 if img is not None:
@@ -87,11 +92,14 @@ def benchmark_realtime(
 
     if not sample_frames:
         # Synthetic fallback
-        sample_frames = [np.random.randint(0, 255, (720, 1280, 3), dtype=np.uint8) for _ in range(num_frames)]
+        sample_frames = [
+            np.random.randint(0, 255, (720, 1280, 3), dtype=np.uint8)
+            for _ in range(num_frames)
+        ]
 
     # Cycle sample frames up to num_frames
     while len(sample_frames) < num_frames:
-        sample_frames.extend(sample_frames[:num_frames - len(sample_frames)])
+        sample_frames.extend(sample_frames[: num_frames - len(sample_frames)])
     sample_frames = sample_frames[:num_frames]
 
     resolution_results = []
@@ -107,7 +115,14 @@ def benchmark_realtime(
 
         # Warmup runs
         for _ in range(warmup_runs):
-            _ = model.predict(sample_frames[0], imgsz=imgsz, conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+            _ = model.predict(
+                sample_frames[0],
+                imgsz=imgsz,
+                conf=conf_thresh,
+                iou=iou_thresh,
+                device=device,
+                verbose=False,
+            )
 
         latencies_e2e = []
         preprocess_times = []
@@ -117,11 +132,18 @@ def benchmark_realtime(
 
         for idx, frame in enumerate(sample_frames):
             # Track CPU start
-            cpu_before = psutil.cpu_percent(interval=None)
+            _ = psutil.cpu_percent(interval=None)
 
             # High precision timing
             t_start = time.perf_counter()
-            results = model.predict(frame, imgsz=imgsz, conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+            results = model.predict(
+                frame,
+                imgsz=imgsz,
+                conf=conf_thresh,
+                iou=iou_thresh,
+                device=device,
+                verbose=False,
+            )
             t_end = time.perf_counter()
 
             e2e_ms = (t_end - t_start) * 1000.0
@@ -139,15 +161,17 @@ def benchmark_realtime(
 
             cpu_usage_samples.append(psutil.cpu_percent(interval=None))
 
-            detailed_frame_records.append({
-                "resolution": f"{w}x{h}",
-                "frame_id": idx + 1,
-                "e2e_latency_ms": round(e2e_ms, 3),
-                "preprocess_ms": round(prep_ms, 3),
-                "inference_ms": round(inf_ms, 3),
-                "postprocess_ms": round(post_ms, 3),
-                "fps": round(1000.0 / max(1e-3, e2e_ms), 2),
-            })
+            detailed_frame_records.append(
+                {
+                    "resolution": f"{w}x{h}",
+                    "frame_id": idx + 1,
+                    "e2e_latency_ms": round(e2e_ms, 3),
+                    "preprocess_ms": round(prep_ms, 3),
+                    "inference_ms": round(inf_ms, 3),
+                    "postprocess_ms": round(post_ms, 3),
+                    "fps": round(1000.0 / max(1e-3, e2e_ms), 2),
+                }
+            )
 
         latencies = np.array(latencies_e2e)
         fps_array = 1000.0 / latencies
@@ -181,7 +205,7 @@ def benchmark_realtime(
             "resource_utilization": {
                 "mean_cpu_percent": round(float(np.mean(cpu_usage_samples)), 2),
                 "process_ram_mb": ram_mb,
-            }
+            },
         }
         resolution_results.append(res_summary)
 
@@ -199,23 +223,29 @@ def benchmark_realtime(
 
     # Save outputs
     save_json_report(benchmark_report, out_path / "realtime_benchmark.json")
-    save_csv_report(pd.DataFrame(detailed_frame_records), out_path / "realtime_benchmark_frames.csv")
-    
+    save_csv_report(
+        pd.DataFrame(detailed_frame_records), out_path / "realtime_benchmark_frames.csv"
+    )
+
     # Save resolution comparison summary CSV
     summary_rows = []
     for r in resolution_results:
-        summary_rows.append({
-            "Resolution": r["resolution"],
-            "Mean FPS": r["fps_metrics"]["mean_fps"],
-            "Median FPS": r["fps_metrics"]["median_fps"],
-            "Std FPS": r["fps_metrics"]["std_fps"],
-            "Mean Latency (ms)": r["latency_metrics_ms"]["mean_e2e_latency_ms"],
-            "P95 Latency (ms)": r["latency_metrics_ms"]["p95_e2e_latency_ms"],
-            "P99 Latency (ms)": r["latency_metrics_ms"]["p99_e2e_latency_ms"],
-            "Inference (ms)": r["latency_metrics_ms"]["mean_inference_ms"],
-            "RAM (MB)": r["resource_utilization"]["process_ram_mb"],
-        })
-    save_csv_report(pd.DataFrame(summary_rows), out_path / "realtime_benchmark_summary.csv")
+        summary_rows.append(
+            {
+                "Resolution": r["resolution"],
+                "Mean FPS": r["fps_metrics"]["mean_fps"],
+                "Median FPS": r["fps_metrics"]["median_fps"],
+                "Std FPS": r["fps_metrics"]["std_fps"],
+                "Mean Latency (ms)": r["latency_metrics_ms"]["mean_e2e_latency_ms"],
+                "P95 Latency (ms)": r["latency_metrics_ms"]["p95_e2e_latency_ms"],
+                "P99 Latency (ms)": r["latency_metrics_ms"]["p99_e2e_latency_ms"],
+                "Inference (ms)": r["latency_metrics_ms"]["mean_inference_ms"],
+                "RAM (MB)": r["resource_utilization"]["process_ram_mb"],
+            }
+        )
+    save_csv_report(
+        pd.DataFrame(summary_rows), out_path / "realtime_benchmark_summary.csv"
+    )
 
     # Print clean summary
     print("\n" + "=" * 75)
@@ -229,14 +259,20 @@ def benchmark_realtime(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AEGIS-AI Real-Time Inference Performance Benchmark")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
-    parser.add_argument("--frames", type=int, default=100, help="Number of benchmark frames")
+    parser = argparse.ArgumentParser(
+        description="AEGIS-AI Real-Time Inference Performance Benchmark"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
+    parser.add_argument(
+        "--frames", type=int, default=100, help="Number of benchmark frames"
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
     args = parser.parse_args()
 
     cfg = load_eval_config(args.config)
-    
+
     benchmark_realtime(
         model_path=cfg["model"]["path"],
         resolutions=cfg["benchmark"]["resolutions"],

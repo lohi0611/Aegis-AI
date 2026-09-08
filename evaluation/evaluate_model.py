@@ -3,13 +3,14 @@ AEGIS-AI — Model Detection Evaluation Pipeline
 Evaluates YOLOv8 PPE detection on test/validation splits and generates quantitative research metrics.
 Calculates Precision, Recall, F1, mAP@50, mAP@50-95, per-class metrics, and confusion matrices.
 """
-import os
-import sys
-import shutil
+
 import argparse
+import os
+import shutil
+import sys
 from pathlib import Path
+
 import pandas as pd
-import numpy as np
 from ultralytics import YOLO
 
 # Add parent directory to sys.path
@@ -19,11 +20,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.utils import (
-    load_eval_config,
     ensure_dir,
     get_hardware_info,
-    save_json_report,
+    load_eval_config,
     save_csv_report,
+    save_json_report,
 )
 
 
@@ -75,7 +76,7 @@ def evaluate_model(
 
     # Extract overall metrics
     metrics_dict = val_results.results_dict
-    
+
     # Map metrics
     mp = float(metrics_dict.get("metrics/precision(B)", 0.0))
     mr = float(metrics_dict.get("metrics/recall(B)", 0.0))
@@ -88,39 +89,72 @@ def evaluate_model(
 
     # Per-class metrics
     per_class_data = []
-    
+
     # Safely extract per-class AP50, AP50_95, P, R
-    class_map50 = val_results.box.all_ap[:, 0] if hasattr(val_results.box, "all_ap") and len(val_results.box.all_ap) > 0 else [0.0]*num_classes
-    class_map50_95 = val_results.box.maps if hasattr(val_results.box, "maps") and len(val_results.box.maps) > 0 else [0.0]*num_classes
-    class_p = val_results.box.p if hasattr(val_results.box, "p") and len(val_results.box.p) > 0 else [0.0]*num_classes
-    class_r = val_results.box.r if hasattr(val_results.box, "r") and len(val_results.box.r) > 0 else [0.0]*num_classes
-    class_f1 = val_results.box.f1 if hasattr(val_results.box, "f1") and len(val_results.box.f1) > 0 else [0.0]*num_classes
+    class_map50 = (
+        val_results.box.all_ap[:, 0]
+        if hasattr(val_results.box, "all_ap") and len(val_results.box.all_ap) > 0
+        else [0.0] * num_classes
+    )
+    class_map50_95 = (
+        val_results.box.maps
+        if hasattr(val_results.box, "maps") and len(val_results.box.maps) > 0
+        else [0.0] * num_classes
+    )
+    class_p = (
+        val_results.box.p
+        if hasattr(val_results.box, "p") and len(val_results.box.p) > 0
+        else [0.0] * num_classes
+    )
+    class_r = (
+        val_results.box.r
+        if hasattr(val_results.box, "r") and len(val_results.box.r) > 0
+        else [0.0] * num_classes
+    )
+    class_f1 = (
+        val_results.box.f1
+        if hasattr(val_results.box, "f1") and len(val_results.box.f1) > 0
+        else [0.0] * num_classes
+    )
 
     for i in range(num_classes):
         c_name = class_names.get(i, f"Class_{i}")
         p_val = float(class_p[i]) if i < len(class_p) else 0.0
         r_val = float(class_r[i]) if i < len(class_r) else 0.0
-        f1_val = float(class_f1[i]) if i < len(class_f1) else (2 * p_val * r_val / (p_val + r_val) if (p_val + r_val) > 0 else 0.0)
+        f1_val = (
+            float(class_f1[i])
+            if i < len(class_f1)
+            else (2 * p_val * r_val / (p_val + r_val) if (p_val + r_val) > 0 else 0.0)
+        )
         m50_val = float(class_map50[i]) if i < len(class_map50) else 0.0
         m50_95_val = float(class_map50_95[i]) if i < len(class_map50_95) else 0.0
 
-        per_class_data.append({
-            "class_id": i,
-            "class_name": c_name,
-            "precision": round(p_val, 4),
-            "recall": round(r_val, 4),
-            "f1_score": round(f1_val, 4),
-            "mAP50": round(m50_val, 4),
-            "mAP50_95": round(m50_95_val, 4),
-        })
+        per_class_data.append(
+            {
+                "class_id": i,
+                "class_name": c_name,
+                "precision": round(p_val, 4),
+                "recall": round(r_val, 4),
+                "f1_score": round(f1_val, 4),
+                "mAP50": round(m50_val, 4),
+                "mAP50_95": round(m50_95_val, 4),
+            }
+        )
 
     per_class_df = pd.DataFrame(per_class_data)
 
     # Copy plots from YOLO run directory to evaluation/results/detection
     yolo_save_dir = Path(val_results.save_dir)
-    plot_files = ["confusion_matrix.png", "confusion_matrix_normalized.png", 
-                  "F1_curve.png", "PR_curve.png", "P_curve.png", "R_curve.png", "val_batch0_pred.jpg"]
-    
+    plot_files = [
+        "confusion_matrix.png",
+        "confusion_matrix_normalized.png",
+        "F1_curve.png",
+        "PR_curve.png",
+        "P_curve.png",
+        "R_curve.png",
+        "val_batch0_pred.jpg",
+    ]
+
     copied_plots = []
     for pf in plot_files:
         src = yolo_save_dir / pf
@@ -168,7 +202,9 @@ def evaluate_model(
     assert 0.0 <= mr <= 1.0, f"Recall out of bounds: {mr}"
     assert 0.0 <= map50 <= 1.0, f"mAP@50 out of bounds: {map50}"
     assert 0.0 <= map50_95 <= 1.0, f"mAP@50-95 out of bounds: {map50_95}"
-    assert len(per_class_data) == num_classes, f"Mismatch in per-class metrics count: {len(per_class_data)} vs {num_classes}"
+    assert (
+        len(per_class_data) == num_classes
+    ), f"Mismatch in per-class metrics count: {len(per_class_data)} vs {num_classes}"
 
     # Save outputs
     save_json_report(summary_report, out_path / "metrics.json")
@@ -191,14 +227,24 @@ def evaluate_model(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AEGIS-AI YOLOv8 Detection Model Evaluation")
-    parser.add_argument("--config", type=str, default=None, help="Path to evaluation config YAML")
-    parser.add_argument("--split", type=str, default="test", choices=["test", "val"], help="Dataset split")
+    parser = argparse.ArgumentParser(
+        description="AEGIS-AI YOLOv8 Detection Model Evaluation"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to evaluation config YAML"
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="test",
+        choices=["test", "val"],
+        help="Dataset split",
+    )
     parser.add_argument("--device", type=str, default="cpu", help="Device (cpu or 0)")
     args = parser.parse_args()
 
     cfg = load_eval_config(args.config)
-    
+
     evaluate_model(
         model_path=cfg["model"]["path"],
         data_yaml=cfg["dataset"]["yaml_path"],

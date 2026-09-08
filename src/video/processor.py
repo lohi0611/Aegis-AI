@@ -2,10 +2,10 @@
 AEGIS — Robust Video Stream Processor
 Handles video capture, frame decimation, resolution clamping, error recovery, and FPS telemetry.
 """
+
 import os
-import time
-from typing import Optional, Generator, Tuple, Union
-from pathlib import Path
+from typing import Generator, Optional, Tuple, Union
+
 import cv2
 import numpy as np
 
@@ -14,6 +14,7 @@ class VideoStreamProcessor:
     """
     Manages robust video stream capture and preprocessing with memory protection.
     """
+
     def __init__(
         self,
         source: Union[int, str],
@@ -25,7 +26,7 @@ class VideoStreamProcessor:
         self.process_every_n_frames = max(1, process_every_n_frames)
         self.max_resolution = max_resolution
         self.use_dshow = use_dshow
-        
+
         self.cap: Optional[cv2.VideoCapture] = None
         self.frame_count = 0
         self.processed_count = 0

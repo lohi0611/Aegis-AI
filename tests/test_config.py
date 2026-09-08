@@ -2,13 +2,16 @@
 AEGIS — Unit Tests for Configuration Loader
 Tests YAML loading, environment variable overrides, and path resolution.
 """
-import sys
+
 import os
+import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
-from src.config.loader import load_config, get_default_config_path
+
+from src.config.loader import load_config
 
 
 class TestConfigLoader:
@@ -40,7 +43,14 @@ class TestConfigLoader:
     def test_config_required_keys_present(self):
         """All critical keys must be present in config."""
         cfg = load_config()
-        required_keys = ["model", "compliance", "database", "video", "alerts", "evaluation"]
+        required_keys = [
+            "model",
+            "compliance",
+            "database",
+            "video",
+            "alerts",
+            "evaluation",
+        ]
         for key in required_keys:
             assert key in cfg, f"Missing required config key: {key}"
 

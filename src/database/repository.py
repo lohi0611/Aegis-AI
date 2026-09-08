@@ -2,9 +2,12 @@
 AEGIS — Database Repository & Data Access Layer
 Encapsulates CRUD operations, session lifecycle, and analytics aggregation queries.
 """
-from datetime import datetime, date, timedelta
-from typing import List, Dict, Any, Optional
-from sqlalchemy import func, desc
+
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import desc, func
+
 from src.database.connection import init_database
 from src.database.models import ScanSession, ViolationEvent
 
@@ -21,7 +24,9 @@ def get_db_session():
     return _SessionLocal()
 
 
-def create_session(scan_type: str = "camera", source_name: Optional[str] = None) -> Optional[int]:
+def create_session(
+    scan_type: str = "camera", source_name: Optional[str] = None
+) -> Optional[int]:
     """Create a new ScanSession record and return session_id."""
     db = get_db_session()
     try:
@@ -52,11 +57,15 @@ def close_session(
     """Close and finalize a ScanSession record."""
     db = get_db_session()
     try:
-        session_obj = db.query(ScanSession).filter(ScanSession.session_id == session_id).first()
+        session_obj = (
+            db.query(ScanSession).filter(ScanSession.session_id == session_id).first()
+        )
         if session_obj:
             now = datetime.utcnow()
             session_obj.end_time = now
-            session_obj.duration_seconds = (now - session_obj.start_time).total_seconds()
+            session_obj.duration_seconds = (
+                now - session_obj.start_time
+            ).total_seconds()
             session_obj.total_frames = total_frames
             session_obj.total_violations = total_violations
             session_obj.status = status
@@ -84,7 +93,11 @@ def log_violation(
 ) -> Optional[int]:
     """Log an individual violation event."""
     if severity is None:
-        severity = "CRITICAL" if ("Hardhat" in str(violation_type) or "Vest" in str(violation_type)) else "HIGH"
+        severity = (
+            "CRITICAL"
+            if ("Hardhat" in str(violation_type) or "Vest" in str(violation_type))
+            else "HIGH"
+        )
 
     bbox = bbox or [0, 0, 0, 0]
     ts = timestamp or datetime.utcnow()
@@ -107,10 +120,14 @@ def log_violation(
             status="Violation",
         )
         db.add(event)
-        
+
         # Increment session violation count if session active
         if session_id is not None:
-            s_obj = db.query(ScanSession).filter(ScanSession.session_id == int(session_id)).first()
+            s_obj = (
+                db.query(ScanSession)
+                .filter(ScanSession.session_id == int(session_id))
+                .first()
+            )
             if s_obj:
                 s_obj.total_violations = (s_obj.total_violations or 0) + 1
 
@@ -161,7 +178,6 @@ def get_session_violations(session_id: int) -> List[Dict[str, Any]]:
         db.close()
 
 
-
 def get_analytics() -> Dict[str, Any]:
     """Calculate aggregated safety metrics for analytics dashboards."""
     db = get_db_session()
@@ -184,7 +200,9 @@ def get_analytics() -> Dict[str, Any]:
 
         # By type distribution
         by_type_query = (
-            db.query(ViolationEvent.violation_type, func.count(ViolationEvent.violation_id))
+            db.query(
+                ViolationEvent.violation_type, func.count(ViolationEvent.violation_id)
+            )
             .group_by(ViolationEvent.violation_type)
             .all()
         )

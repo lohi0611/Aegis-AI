@@ -2,18 +2,21 @@
 AEGIS — Unit Tests for Spatial PPE Association Module
 Tests geometric containment, IoU, and anatomical scoring logic.
 """
+
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
+
 from src.association.spatial import (
-    compute_bbox_area,
-    compute_intersection_area,
-    compute_containment_ratio,
-    compute_iou,
-    compute_anatomical_score,
     SpatialPPEAssociator,
+    compute_anatomical_score,
+    compute_bbox_area,
+    compute_containment_ratio,
+    compute_intersection_area,
+    compute_iou,
 )
 
 
@@ -29,7 +32,9 @@ class TestBboxUtils:
         assert compute_intersection_area(box, box) == pytest.approx(100.0)
 
     def test_intersection_no_overlap(self):
-        assert compute_intersection_area([0, 0, 5, 5], [10, 10, 20, 20]) == pytest.approx(0.0)
+        assert compute_intersection_area(
+            [0, 0, 5, 5], [10, 10, 20, 20]
+        ) == pytest.approx(0.0)
 
     def test_containment_fully_inside(self):
         """Small PPE box fully inside large person box."""
@@ -58,17 +63,23 @@ class TestBboxUtils:
 class TestAnatomicalScore:
     def test_hardhat_in_head_region(self):
         # PPE center at y=150, person from y=100 to y=400 -> rel_y = 50/300 = 0.167 (head)
-        score = compute_anatomical_score("Hardhat", [40, 130, 80, 170], [20, 100, 100, 400])
+        score = compute_anatomical_score(
+            "Hardhat", [40, 130, 80, 170], [20, 100, 100, 400]
+        )
         assert score == pytest.approx(1.0)
 
     def test_hardhat_in_foot_region(self):
         # PPE center near feet of person
-        score = compute_anatomical_score("Hardhat", [40, 370, 80, 400], [20, 100, 100, 400])
+        score = compute_anatomical_score(
+            "Hardhat", [40, 370, 80, 400], [20, 100, 100, 400]
+        )
         assert score == pytest.approx(0.1)
 
     def test_safety_vest_in_torso_region(self):
         # PPE center at y=250, person from y=100 to y=400 -> rel_y = 150/300 = 0.5 (torso)
-        score = compute_anatomical_score("Safety Vest", [40, 230, 80, 270], [20, 100, 100, 400])
+        score = compute_anatomical_score(
+            "Safety Vest", [40, 230, 80, 270], [20, 100, 100, 400]
+        )
         assert score == pytest.approx(1.0)
 
 
@@ -78,8 +89,12 @@ class TestSpatialAssociator:
 
     def test_associate_hardhat_to_person(self):
         """Hardhat box contained inside person box should be assigned."""
-        person_dets = [{"bbox": [0, 0, 100, 300], "track_id": "WKR_101", "confidence": 0.9}]
-        ppe_dets = [{"class_name": "Hardhat", "bbox": [5, 5, 60, 60], "confidence": 0.85}]
+        person_dets = [
+            {"bbox": [0, 0, 100, 300], "track_id": "WKR_101", "confidence": 0.9}
+        ]
+        ppe_dets = [
+            {"class_name": "Hardhat", "bbox": [5, 5, 60, 60], "confidence": 0.85}
+        ]
         workers, isolated = self.associator.associate(person_dets, ppe_dets)
         assert len(workers) == 1
         assert len(workers[0]["assigned_ppe"]) == 1
@@ -88,15 +103,21 @@ class TestSpatialAssociator:
 
     def test_no_person_returns_isolated(self):
         """If no person detected, all PPE should be isolated."""
-        ppe_dets = [{"class_name": "NO-Hardhat", "bbox": [10, 10, 50, 50], "confidence": 0.75}]
+        ppe_dets = [
+            {"class_name": "NO-Hardhat", "bbox": [10, 10, 50, 50], "confidence": 0.75}
+        ]
         workers, isolated = self.associator.associate([], ppe_dets)
         assert len(workers) == 0
         assert len(isolated) == 1
 
     def test_out_of_range_ppe_not_assigned(self):
         """PPE far from person should not be assigned."""
-        person_dets = [{"bbox": [0, 0, 100, 100], "track_id": "WKR_101", "confidence": 0.9}]
-        ppe_dets = [{"class_name": "Hardhat", "bbox": [200, 200, 300, 300], "confidence": 0.8}]
+        person_dets = [
+            {"bbox": [0, 0, 100, 100], "track_id": "WKR_101", "confidence": 0.9}
+        ]
+        ppe_dets = [
+            {"class_name": "Hardhat", "bbox": [200, 200, 300, 300], "confidence": 0.8}
+        ]
         workers, isolated = self.associator.associate(person_dets, ppe_dets)
         assert len(workers[0]["assigned_ppe"]) == 0
         assert len(isolated) == 1

@@ -1,16 +1,17 @@
 """
 AEGIS Database Package
 """
-from src.database.connection import init_database, get_default_db_url
+
+from src.database.connection import get_default_db_url, init_database
 from src.database.models import Base, ScanSession, ViolationEvent
 from src.database.repository import (
-    get_db_session,
-    create_session,
     close_session,
-    log_violation,
+    create_session,
+    get_analytics,
+    get_db_session,
     get_recent_sessions,
     get_session_violations,
-    get_analytics,
+    log_violation,
 )
 
 __all__ = [

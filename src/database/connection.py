@@ -2,20 +2,22 @@
 AEGIS — Database Connection Factory
 Handles database initialization, connection pooling, and session creation.
 """
+
 import os
 from pathlib import Path
 from typing import Optional
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.orm import scoped_session, sessionmaker
+
 from src.database.models import Base
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # On Streamlit Cloud the source tree is read-only; write DB to /tmp instead
-_IS_CLOUD = (
-    os.environ.get("STREAMLIT_SHARING_MODE") == "1"
-    or os.environ.get("HOME", "").startswith("/home/adminuser")
-)
+_IS_CLOUD = os.environ.get("STREAMLIT_SHARING_MODE") == "1" or os.environ.get(
+    "HOME", ""
+).startswith("/home/adminuser")
 
 
 def get_default_db_url() -> str:
@@ -29,14 +31,13 @@ def get_default_db_url() -> str:
     return f"sqlite:///{db_file.as_posix()}"
 
 
-
 def init_database(db_url: Optional[str] = None):
     """
     Initialize SQLAlchemy database engine and create tables.
     Returns (engine, SessionLocal).
     """
     url = db_url or os.environ.get("DATABASE_URL") or get_default_db_url()
-    
+
     # Fix postgres:// URL prefix if provided by older cloud services
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)

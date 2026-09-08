@@ -2,9 +2,17 @@
 AEGIS — Database Schema & ORM Models
 Defines ScanSession and ViolationEvent relational tables with indexes and foreign keys.
 """
+
 from datetime import datetime
+
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Index, Text
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -13,6 +21,7 @@ Base = declarative_base()
 
 class ScanSession(Base):
     """Represents a continuous monitoring scan session."""
+
     __tablename__ = "scan_sessions"
 
     session_id = Column(Integer, primary_key=True, autoincrement=True)
@@ -26,11 +35,11 @@ class ScanSession(Base):
     status = Column(String(32), nullable=False, default="running", index=True)
 
     # Relationships
-    violations = relationship("ViolationEvent", back_populates="session", cascade="all, delete-orphan")
-
-    __table_args__ = (
-        Index("idx_session_status_time", "status", "start_time"),
+    violations = relationship(
+        "ViolationEvent", back_populates="session", cascade="all, delete-orphan"
     )
+
+    __table_args__ = (Index("idx_session_status_time", "status", "start_time"),)
 
     def to_dict(self):
         return {
@@ -48,23 +57,29 @@ class ScanSession(Base):
 
 class ViolationEvent(Base):
     """Represents an individual confirmed PPE violation event."""
+
     __tablename__ = "violations"
 
     violation_id = Column(Integer, primary_key=True, autoincrement=True)
-    session_id = Column(Integer, ForeignKey("scan_sessions.session_id", ondelete="CASCADE"), nullable=True, index=True)
+    session_id = Column(
+        Integer,
+        ForeignKey("scan_sessions.session_id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     worker_id = Column(String(64), nullable=True, index=True)
     violation_type = Column(String(64), nullable=False, index=True)
     confidence_score = Column(Float, nullable=False, default=0.0)
     severity = Column(String(32), nullable=False, default="HIGH", index=True)
     timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
     frame_number = Column(Integer, nullable=False, default=0)
-    
+
     # Bounding box coordinates
     bbox_x1 = Column(Integer, nullable=True)
     bbox_y1 = Column(Integer, nullable=True)
     bbox_x2 = Column(Integer, nullable=True)
     bbox_y2 = Column(Integer, nullable=True)
-    
+
     snapshot_path = Column(String(512), nullable=True)
     status = Column(String(32), nullable=False, default="Violation")
 

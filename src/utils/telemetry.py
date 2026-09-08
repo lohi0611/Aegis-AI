@@ -1,13 +1,16 @@
 """
 AEGIS — Performance Telemetry & Timer Module
 """
+
 import time
-from typing import Dict, Any, List
+from typing import Dict, List
+
 import numpy as np
 
 
 class PerformanceTimer:
     """High-precision latency and throughput measurement utility."""
+
     def __init__(self, history_len: int = 60):
         self.history_len = history_len
         self.latencies_ms: List[float] = []

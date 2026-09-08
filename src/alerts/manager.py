@@ -2,14 +2,16 @@
 AEGIS — Alert & Event Dispatch Manager
 Handles violation event throttling, cooldowns, severity routing, and notification dispatching.
 """
+
 import time
-from typing import Dict, Tuple, Optional, Any, List
+from typing import Dict, Optional, Tuple
 
 
 class AlertManager:
     """
     Manages safety alerts and event throttling with configurable cooldown periods.
     """
+
     def __init__(
         self,
         cooldown_seconds: float = 15.0,
@@ -29,7 +31,7 @@ class AlertManager:
         """
         key = (worker_id, violation_type)
         now = time.time()
-        
+
         if key in self.last_alert_timestamps:
             if (now - self.last_alert_timestamps[key]) < self.cooldown_seconds:
                 return False

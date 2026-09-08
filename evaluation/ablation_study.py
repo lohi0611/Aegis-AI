@@ -12,12 +12,14 @@ Evaluates:
   2. Latency & Runtime Metrics (Mean Latency, P95 Latency, FPS)
   3. Temporal Event Stabilization (Raw vs. Confirmed vs. Throttled Alerts)
 """
+
+import argparse
 import os
 import sys
 import time
-import argparse
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -29,22 +31,24 @@ REPO_ROOT = SCRIPT_DIR.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from evaluation.utils import (
+    ensure_dir,
+    get_hardware_info,
+    load_eval_config,
+    save_csv_report,
+    save_json_report,
+)
+from src.alerts.manager import AlertManager
 from src.association.spatial import SpatialPPEAssociator, compute_iou
+from src.compliance.engine import ComplianceEngine
 from src.compliance.rules import PPERuleEngine
 from src.compliance.temporal import TemporalHysteresisFilter
 from src.tracking.centroid import CentroidTracker
-from src.alerts.manager import AlertManager
-from src.compliance.engine import ComplianceEngine
-from evaluation.utils import (
-    load_eval_config,
-    ensure_dir,
-    get_hardware_info,
-    save_json_report,
-    save_csv_report,
-)
 
 
-def parse_yolo_labels(label_path: Path, img_w: int, img_h: int, class_mapping: Dict[int, str]) -> List[Dict[str, Any]]:
+def parse_yolo_labels(
+    label_path: Path, img_w: int, img_h: int, class_mapping: Dict[int, str]
+) -> List[Dict[str, Any]]:
     """Parse YOLO label file."""
     if not label_path.exists():
         return []
@@ -59,11 +63,13 @@ def parse_yolo_labels(label_path: Path, img_w: int, img_h: int, class_mapping: D
                 y1 = (cy - bh / 2.0) * img_h
                 x2 = (cx + bw / 2.0) * img_w
                 y2 = (cy + bh / 2.0) * img_h
-                items.append({
-                    "class_id": cls_id,
-                    "class_name": class_mapping.get(cls_id, f"Class_{cls_id}"),
-                    "bbox": [x1, y1, x2, y2],
-                })
+                items.append(
+                    {
+                        "class_id": cls_id,
+                        "class_name": class_mapping.get(cls_id, f"Class_{cls_id}"),
+                        "bbox": [x1, y1, x2, y2],
+                    }
+                )
     return items
 
 
@@ -99,7 +105,9 @@ def run_ablation_study(
 
     model = YOLO(model_path)
     associator = SpatialPPEAssociator(containment_threshold=0.35)
-    rule_engine = PPERuleEngine(require_hardhat=True, require_vest=True, require_mask=False)
+    rule_engine = PPERuleEngine(
+        require_hardhat=True, require_vest=True, require_mask=False
+    )
 
     violation_names = {"NO-Hardhat", "NO-Mask", "NO-Safety Vest"}
     img_files = sorted(list(img_dir.glob("*.jpg")) + list(img_dir.glob("*.png")))
@@ -126,7 +134,9 @@ def run_ablation_study(
         gt_items = parse_yolo_labels(lbl_path, w, h, class_mapping)
 
         # Ground Truth Frame Status
-        gt_has_violation = any(item["class_name"] in violation_names for item in gt_items)
+        gt_has_violation = any(
+            item["class_name"] in violation_names for item in gt_items
+        )
 
         # Ground Truth Worker Statuses
         gt_persons = [item for item in gt_items if item["class_name"] == "Person"]
@@ -138,7 +148,13 @@ def run_ablation_study(
 
         # --- A0 Execution ---
         t0 = time.perf_counter()
-        results = model.predict(str(img_path), conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+        results = model.predict(
+            str(img_path),
+            conf=conf_thresh,
+            iou=iou_thresh,
+            device=device,
+            verbose=False,
+        )
         t1 = time.perf_counter()
         latencies_a0.append((t1 - t0) * 1000.0)
 
@@ -156,12 +172,16 @@ def run_ablation_study(
             item = {"class_name": c_name, "bbox": bbox, "confidence": conf}
             pred_items.append(item)
             if c_name == "Person":
-                pred_persons.append({"bbox": bbox, "track_id": f"P_{p_idx}", "confidence": conf})
+                pred_persons.append(
+                    {"bbox": bbox, "track_id": f"P_{p_idx}", "confidence": conf}
+                )
                 p_idx += 1
             else:
                 pred_ppe.append(item)
 
-        pred_has_raw_violation = any(item["class_name"] in violation_names for item in pred_items)
+        pred_has_raw_violation = any(
+            item["class_name"] in violation_names for item in pred_items
+        )
 
         if gt_has_violation and pred_has_raw_violation:
             a0_tp += 1
@@ -175,7 +195,9 @@ def run_ablation_study(
         # --- A1 Execution ---
         t2 = time.perf_counter()
         pred_assoc, _ = associator.associate(pred_persons, pred_ppe)
-        pred_worker_states = [rule_engine.evaluate_worker(w_rec) for w_rec in pred_assoc]
+        pred_worker_states = [
+            rule_engine.evaluate_worker(w_rec) for w_rec in pred_assoc
+        ]
         t3 = time.perf_counter()
         latencies_a1.append((t1 - t0 + t3 - t2) * 1000.0)
 
@@ -241,8 +263,15 @@ def run_ablation_study(
     # Initialize components for sequential testing
     tracker_a2 = CentroidTracker(max_disappeared=15, min_distance=100.0)
     tracker_a3 = CentroidTracker(max_disappeared=15, min_distance=100.0)
-    temporal_a3 = TemporalHysteresisFilter(violation_confirm_frames=3, resolution_confirm_frames=5)
-    full_engine_a4 = ComplianceEngine(require_hardhat=True, require_vest=True, require_mask=False, violation_confirm_frames=3)
+    temporal_a3 = TemporalHysteresisFilter(
+        violation_confirm_frames=3, resolution_confirm_frames=5
+    )
+    full_engine_a4 = ComplianceEngine(
+        require_hardhat=True,
+        require_vest=True,
+        require_mask=False,
+        violation_confirm_frames=3,
+    )
     alert_mgr_a4 = AlertManager(cooldown_seconds=5.0)
 
     latencies_a2, latencies_a3, latencies_a4 = [], [], []
@@ -251,7 +280,9 @@ def run_ablation_study(
     for frame in frames:
         # A0: Raw Detector
         t_start = time.perf_counter()
-        res = model.predict(frame, conf=conf_thresh, iou=iou_thresh, device=device, verbose=False)
+        res = model.predict(
+            frame, conf=conf_thresh, iou=iou_thresh, device=device, verbose=False
+        )
         t_det = time.perf_counter()
 
         boxes = res[0].boxes
@@ -274,7 +305,10 @@ def run_ablation_study(
         events_a0 += raw_viol_count
 
         # A1: Detector + Spatial Association
-        p_records = [{"bbox": b, "track_id": f"P_{i}", "confidence": 1.0} for i, b in enumerate(person_boxes)]
+        p_records = [
+            {"bbox": b, "track_id": f"P_{i}", "confidence": 1.0}
+            for i, b in enumerate(person_boxes)
+        ]
         w_a1, unassigned_a1 = associator.associate(p_records, ppe_boxes)
         eval_a1 = [rule_engine.evaluate_worker(w) for w in w_a1]
         events_a1 += sum(1 for w in eval_a1 if w["status"] == "Violation")
@@ -282,7 +316,10 @@ def run_ablation_study(
         # A2: Detector + Spatial Association + Centroid Tracking
         t_a2_start = time.perf_counter()
         track_ids = tracker_a2.update(person_boxes, ["Person"] * len(person_boxes))
-        tracked_persons = [{"bbox": b, "track_id": tid, "confidence": 1.0} for b, tid in zip(person_boxes, track_ids)]
+        tracked_persons = [
+            {"bbox": b, "track_id": tid, "confidence": 1.0}
+            for b, tid in zip(person_boxes, track_ids)
+        ]
         w_a2, _ = associator.associate(tracked_persons, ppe_boxes)
         eval_a2 = [rule_engine.evaluate_worker(w) for w in w_a2]
         t_a2_end = time.perf_counter()
@@ -292,17 +329,26 @@ def run_ablation_study(
         # A3: Detector + Association + Tracking + Temporal Hysteresis Filter
         t_a3_start = time.perf_counter()
         track_ids3 = tracker_a3.update(person_boxes, ["Person"] * len(person_boxes))
-        tracked_persons3 = [{"bbox": b, "track_id": tid, "confidence": 1.0} for b, tid in zip(person_boxes, track_ids3)]
+        tracked_persons3 = [
+            {"bbox": b, "track_id": tid, "confidence": 1.0}
+            for b, tid in zip(person_boxes, track_ids3)
+        ]
         w_a3, _ = associator.associate(tracked_persons3, ppe_boxes)
         eval_a3 = [rule_engine.evaluate_worker(w) for w in w_a3]
         stabilized_a3 = temporal_a3.update(eval_a3)
         t_a3_end = time.perf_counter()
         latencies_a3.append((t_det - t_start + t_a3_end - t_a3_start) * 1000.0)
-        events_a3 += sum(1 for w in stabilized_a3 if w["status"] == "Violation" and w.get("temporally_confirmed", False))
+        events_a3 += sum(
+            1
+            for w in stabilized_a3
+            if w["status"] == "Violation" and w.get("temporally_confirmed", False)
+        )
 
         # A4: Full AEGIS Pipeline (+ Alert Cooldown Throttling)
         t_a4_start = time.perf_counter()
-        engine_out = full_engine_a4.process_frame_detections(dets, person_track_ids=track_ids3)
+        engine_out = full_engine_a4.process_frame_detections(
+            dets, person_track_ids=track_ids3
+        )
         dispatched_this_frame = 0
         for w in engine_out["workers"]:
             if w["status"] == "Violation" and w.get("temporally_confirmed", False):
@@ -358,7 +404,9 @@ def run_ablation_study(
             "P95 Latency (ms)": round(float(np.percentile(latencies_a1, 95)), 2),
             "FPS": round(1000.0 / float(np.mean(latencies_a1)), 2),
             "Generated Events (100 frames)": events_a1,
-            "Event Reduction vs A0 (%)": round((1.0 - events_a1 / max(1, events_a0)) * 100, 2),
+            "Event Reduction vs A0 (%)": round(
+                (1.0 - events_a1 / max(1, events_a0)) * 100, 2
+            ),
         },
         {
             "Configuration": "A2: + Centroid Tracking (Persistent IDs)",
@@ -373,7 +421,9 @@ def run_ablation_study(
             "P95 Latency (ms)": round(float(np.percentile(latencies_a2, 95)), 2),
             "FPS": round(1000.0 / float(np.mean(latencies_a2)), 2),
             "Generated Events (100 frames)": events_a2,
-            "Event Reduction vs A0 (%)": round((1.0 - events_a2 / max(1, events_a0)) * 100, 2),
+            "Event Reduction vs A0 (%)": round(
+                (1.0 - events_a2 / max(1, events_a0)) * 100, 2
+            ),
         },
         {
             "Configuration": "A3: + Temporal Hysteresis (N=3 Frame Confirm)",
@@ -388,7 +438,9 @@ def run_ablation_study(
             "P95 Latency (ms)": round(float(np.percentile(latencies_a3, 95)), 2),
             "FPS": round(1000.0 / float(np.mean(latencies_a3)), 2),
             "Generated Events (100 frames)": events_a3,
-            "Event Reduction vs A0 (%)": round((1.0 - events_a3 / max(1, events_a0)) * 100, 2),
+            "Event Reduction vs A0 (%)": round(
+                (1.0 - events_a3 / max(1, events_a0)) * 100, 2
+            ),
         },
         {
             "Configuration": "A4: Full AEGIS (Tracking + Temporal + Cooldown)",
@@ -403,7 +455,9 @@ def run_ablation_study(
             "P95 Latency (ms)": round(float(np.percentile(latencies_a4, 95)), 2),
             "FPS": round(1000.0 / float(np.mean(latencies_a4)), 2),
             "Generated Events (100 frames)": events_a4,
-            "Event Reduction vs A0 (%)": round((1.0 - events_a4 / max(1, events_a0)) * 100, 2),
+            "Event Reduction vs A0 (%)": round(
+                (1.0 - events_a4 / max(1, events_a0)) * 100, 2
+            ),
         },
     ]
 

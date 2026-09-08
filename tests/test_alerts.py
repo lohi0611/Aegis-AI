@@ -2,12 +2,14 @@
 AEGIS — Unit Tests for Alert Manager
 Tests cooldown throttling, severity resolution, and deduplication logic.
 """
+
 import sys
 import time
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import pytest
+
 from src.alerts.manager import AlertManager
 
 
