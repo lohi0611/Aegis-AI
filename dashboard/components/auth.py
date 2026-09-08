@@ -57,68 +57,60 @@ def render_auth_page(initial_mode: str = "login"):
     with col_left:
         st.markdown(f"""
 <div class="auth-left-hero" style="border-radius:16px;">
-    <div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
-            <div style="width:42px;height:42px;background:rgba(245,158,11,0.12);
-                border:1.5px solid rgba(245,158,11,0.35);border-radius:12px;
-                display:flex;align-items:center;justify-content:center;color:#F59E0B;flex-shrink:0;">
-                {ICONS['shield'].replace('18', '24')}
-            </div>
-            <div>
-                <div style="font-size:1.2rem;font-weight:900;letter-spacing:1px;color:var(--text-primary);">AEGIS AI</div>
-                <div style="font-size:0.68rem;color:var(--text-muted);letter-spacing:0.6px;text-transform:uppercase;">Safety Command</div>
-            </div>
-        </div>
-
-        <div style="font-size:1.9rem;font-weight:800;line-height:1.22;color:var(--text-primary);margin-bottom:14px;">
-            Next-Generation <br>
-            <span style="color:var(--accent);">Safety Intelligence</span>
-        </div>
-        <p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-bottom:28px;">
-            Join world-class engineering teams leveraging real-time neural vision to protect personnel,
-            automate OSHA compliance, and eliminate catastrophic job site hazards.
-        </p>
-
-        <!-- Feature Points -->
-        <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:30px;">
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <div style="color:#10B981;margin-top:2px;">{ICONS['check-circle']}</div>
-                <div>
-                    <div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Sub-30ms Edge Detection</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);">High-precision YOLOv8 model tuned for challenging worksite lighting.</div>
-                </div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <div style="color:#F59E0B;margin-top:2px;">{ICONS['activity']}</div>
-                <div>
-                    <div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Spatial Anatomical Correlator</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);">Accurately links safety equipment to individual worker tracks.</div>
-                </div>
-            </div>
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <div style="color:#06B6D4;margin-top:2px;">{ICONS['database']}</div>
-                <div>
-                    <div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Cryptographic Audit Trail</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);">Immutable incident database with full-resolution visual snapshots.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Live Telemetry Mini-Card -->
-    <div style="background:var(--bg-card-2);border:1px solid var(--border-subtle);border-radius:10px;padding:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div style="display:flex;align-items:center;gap:6px;">
-                <span class="dot dot-live"></span>
-                <span style="font-size:0.72rem;font-weight:700;color:var(--text-primary);letter-spacing:0.5px;">SYSTEM STATUS</span>
-            </div>
-            <span style="font-size:0.72rem;color:#10B981;font-weight:600;">ACTIVE</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.75rem;color:var(--text-secondary);">
-            <span>Core Version: <b>v2.4.0-prod</b></span>
-            <span>Security: <b>PBKDF2-HMAC</b></span>
-        </div>
-    </div>
+<div>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+<div style="width:42px;height:42px;background:rgba(245,158,11,0.12);border:1.5px solid rgba(245,158,11,0.35);border-radius:12px;display:flex;align-items:center;justify-content:center;color:#F59E0B;flex-shrink:0;">
+{ICONS['shield'].replace('18', '24')}
+</div>
+<div>
+<div style="font-size:1.2rem;font-weight:900;letter-spacing:1px;color:var(--text-primary);">AEGIS AI</div>
+<div style="font-size:0.68rem;color:var(--text-muted);letter-spacing:0.6px;text-transform:uppercase;">Safety Command</div>
+</div>
+</div>
+<div style="font-size:1.9rem;font-weight:800;line-height:1.22;color:var(--text-primary);margin-bottom:14px;">
+Next-Generation <br>
+<span style="color:var(--accent);">Safety Intelligence</span>
+</div>
+<p style="font-size:0.88rem;color:var(--text-secondary);line-height:1.6;margin-bottom:28px;">
+Join world-class engineering teams leveraging real-time neural vision to protect personnel, automate OSHA compliance, and eliminate catastrophic job site hazards.
+</p>
+<div style="display:flex;flex-direction:column;gap:14px;margin-bottom:30px;">
+<div style="display:flex;align-items:flex-start;gap:12px;">
+<div style="color:#10B981;margin-top:2px;">{ICONS['check-circle']}</div>
+<div>
+<div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Sub-30ms Edge Detection</div>
+<div style="font-size:0.75rem;color:var(--text-muted);">High-precision YOLOv8 model tuned for challenging worksite lighting.</div>
+</div>
+</div>
+<div style="display:flex;align-items:flex-start;gap:12px;">
+<div style="color:#F59E0B;margin-top:2px;">{ICONS['activity']}</div>
+<div>
+<div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Spatial Anatomical Correlator</div>
+<div style="font-size:0.75rem;color:var(--text-muted);">Accurately links safety equipment to individual worker tracks.</div>
+</div>
+</div>
+<div style="display:flex;align-items:flex-start;gap:12px;">
+<div style="color:#06B6D4;margin-top:2px;">{ICONS['database']}</div>
+<div>
+<div style="font-size:0.84rem;font-weight:700;color:var(--text-primary);">Cryptographic Audit Trail</div>
+<div style="font-size:0.75rem;color:var(--text-muted);">Immutable incident database with full-resolution visual snapshots.</div>
+</div>
+</div>
+</div>
+</div>
+<div style="background:var(--bg-card-2);border:1px solid var(--border-subtle);border-radius:10px;padding:14px;">
+<div style="display:flex;justify-content:space-between;align-items:center;">
+<div style="display:flex;align-items:center;gap:6px;">
+<span class="dot dot-live"></span>
+<span style="font-size:0.72rem;font-weight:700;color:var(--text-primary);letter-spacing:0.5px;">SYSTEM STATUS</span>
+</div>
+<span style="font-size:0.72rem;color:#10B981;font-weight:600;">ACTIVE</span>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.75rem;color:var(--text-secondary);">
+<span>Core Version: <b>v2.4.0-prod</b></span>
+<span>Security: <b>PBKDF2-HMAC</b></span>
+</div>
+</div>
 </div>
 """, unsafe_allow_html=True)
 
