@@ -670,6 +670,245 @@ hr {{ border-color: var(--border-subtle) !important; margin: 12px 0 !important; 
 [data-testid="stMetricLabel"] {{ color: var(--text-secondary) !important; font-size: 0.78rem !important; font-weight: 500 !important; }}
 [data-testid="stMetricValue"] {{ color: var(--text-primary) !important; font-size: 1.65rem !important; font-weight: 700 !important; }}
 
+/* ── LANDING PAGE HERO & SECTIONS ────────────────────────── */
+.landing-hero {
+    position: relative;
+    padding: 48px 24px 36px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 10%, rgba(245, 158, 11, 0.12) 0%, transparent 65%);
+    border-radius: 20px;
+    border: 1px solid var(--border-subtle);
+    margin-bottom: 32px;
+    overflow: hidden;
+}
+.landing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    background: rgba(245, 158, 11, 0.10);
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+.landing-title {
+    font-size: 2.8rem;
+    font-weight: 800;
+    line-height: 1.18;
+    color: var(--text-primary);
+    margin-bottom: 18px;
+    letter-spacing: -0.8px;
+}
+.landing-title span {
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 50%, #10B981 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.landing-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 720px;
+    margin: 0 auto 30px;
+    line-height: 1.6;
+}
+.landing-stats-row {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+}
+.landing-stat-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r);
+    padding: 16px 24px;
+    text-align: center;
+    min-width: 150px;
+    box-shadow: var(--shadow-card);
+    transition: transform var(--t), border-color var(--t);
+}
+.landing-stat-box:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-accent);
+}
+.landing-stat-num {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+}
+.landing-stat-label {
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+/* ── FEATURE CARDS ─────────────────────────────────────────── */
+.feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-card);
+    transition: all var(--t);
+    position: relative;
+    overflow: hidden;
+}
+.feature-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--border-accent);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.35), 0 0 16px var(--accent-glow);
+}
+.feature-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+.feature-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+.feature-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    flex-grow: 1;
+}
+
+/* ── TIMELINE 01-04 ─────────────────────────────────────────── */
+.step-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r);
+    padding: 20px;
+    position: relative;
+    box-shadow: var(--shadow-card);
+    transition: all var(--t);
+    height: 100%;
+}
+.step-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+}
+.step-num {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: rgba(245, 158, 11, 0.25);
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: 'JetBrains Mono', monospace;
+}
+.step-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+}
+.step-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ── AUTH SPLIT SCREEN ──────────────────────────────────────── */
+.auth-split-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: var(--shadow-elevated);
+    margin: 20px auto;
+    max-width: 960px;
+}
+.auth-left-hero {
+    background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(13,18,27,0.95) 100%);
+    border-right: 1px solid var(--border-subtle);
+    padding: 40px 32px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+.auth-right-form {
+    padding: 36px 32px;
+}
+.auth-strength-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    margin-top: 6px;
+    margin-bottom: 12px;
+}
+.auth-strength-fill {
+    height: 100%;
+    transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+/* ── AUTHENTICATED TOP NAV BAR ──────────────────────────────── */
+.auth-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r);
+    margin-bottom: 18px;
+    box-shadow: var(--shadow-card);
+}
+.user-badge-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border-subtle);
+    padding: 5px 12px;
+    border-radius: 9999px;
+}
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #F59E0B, #10B981);
+    color: #080C12;
+    font-weight: 800;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── ACCESS GATE ────────────────────────────────────────────── */
+.access-gate-card {
+    max-width: 480px;
+    margin: 60px auto;
+    text-align: center;
+    padding: 40px 32px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-elevated);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -973,3 +1212,92 @@ def scan_complete_placeholder(violations: int, frames: int, duration: str = ""):
     <div style="font-size:1.4rem;font-weight:700;color:{score_color};">{score}% <span style="font-size:0.78rem;font-weight:500;color:var(--text-muted);">safety score</span></div>
 </div>
 """, unsafe_allow_html=True)
+
+
+def render_authenticated_nav(current_page: str = "Live Monitor", user_info: dict = None):
+    """
+    Render top-level executive navigation bar for authenticated users.
+    Displays user profile chip, active status, theme toggle, and Sign Out button.
+    """
+    user_info = user_info or {}
+    name = user_info.get("full_name", "Safety Inspector")
+    role = user_info.get("role", "Inspector")
+    initials = "".join(part[0].upper() for part in name.split()[:2]) if name else "AI"
+
+    c_brand, c_pill, c_user, c_actions = st.columns([4, 3, 3, 2])
+
+    with c_brand:
+        st.markdown(f"""
+<div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:34px;height:34px;background:rgba(245,158,11,0.12);
+        border:1.5px solid rgba(245,158,11,0.3);border-radius:9px;
+        display:flex;align-items:center;justify-content:center;color:#F59E0B;flex-shrink:0;">
+        {ICONS['shield']}
+    </div>
+    <div>
+        <div style="font-size:0.95rem;font-weight:800;letter-spacing:1px;color:var(--text-primary);">AEGIS SAFETY</div>
+        <div style="font-size:0.62rem;color:var(--text-muted);letter-spacing:0.5px;">COMMAND CENTER</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    with c_pill:
+        st.markdown(f"""
+<div style="display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:var(--bg-card-2);
+    border:1px solid var(--border-subtle);border-radius:9999px;margin-top:2px;">
+    <span class="dot dot-live"></span>
+    <span style="font-size:0.75rem;font-weight:600;color:var(--accent);">{current_page}</span>
+</div>
+""", unsafe_allow_html=True)
+
+    with c_user:
+        st.markdown(f"""
+<div class="user-badge-chip">
+    <div class="user-avatar">{initials}</div>
+    <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        <div style="font-size:0.78rem;font-weight:700;color:var(--text-primary);">{name}</div>
+        <div style="font-size:0.65rem;color:var(--text-muted);">{role}</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+    with c_actions:
+        btn_c1, btn_c2 = st.columns([1, 2])
+        with btn_c1:
+            render_theme_toggle(key=f"nav_theme_toggle_{current_page.replace(' ', '_')}")
+        with btn_c2:
+            if st.button("Sign Out", key=f"nav_signout_{current_page.replace(' ', '_')}", use_container_width=True):
+                st.session_state.authenticated = False
+                st.session_state.user = None
+                st.session_state.active_view = "landing"
+                st.session_state.running = False
+                st.rerun()
+
+
+def auth_protected_gate(target_page_name: str = "This Page"):
+    """
+    Renders an access barrier if unauthenticated users access a protected subpage.
+    Provides instant action to return to login.
+    """
+    st.markdown(f"""
+<div class="access-gate-card">
+    <div style="width:52px;height:52px;background:rgba(239,68,68,0.12);
+        border:1.5px solid rgba(239,68,68,0.25);border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        margin:0 auto 18px;color:#EF4444;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <div style="font-size:1.3rem;font-weight:800;color:var(--text-primary);margin-bottom:8px;">Authentication Required</div>
+    <p style="font-size:0.86rem;color:var(--text-secondary);line-height:1.6;margin-bottom:24px;">
+        Access to <b>{target_page_name}</b> requires verified credentials with active safety inspector authorization.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+    col_l, col_m, col_r = st.columns([1, 1.4, 1])
+    with col_m:
+        if st.button("🔐 Sign In to Continue", key=f"gate_signin_{target_page_name.replace(' ', '_')}", use_container_width=True):
+            st.session_state.active_view = "login"
+            st.switch_page("app.py") if hasattr(st, "switch_page") else None
+            st.rerun()
+

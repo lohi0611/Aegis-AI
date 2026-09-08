@@ -21,10 +21,10 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from ui_utils import (
-
     apply_custom_css, mission_control_header, kpi_card,
     navigation_tip, render_theme_toggle, section_label,
     get_plotly_layout_defaults, ICONS, ORANGE, RED, GREEN, TEAL, AMBER,
+    render_authenticated_nav, auth_protected_gate,
 )
 from db import DB_AVAILABLE, get_analytics, get_recent_sessions, get_session_violations
 
@@ -35,6 +35,11 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 apply_custom_css()
+
+# ── Authentication Gate ───────────────────────────────────────────────────────
+if not st.session_state.get("authenticated", False):
+    auth_protected_gate("Compliance Analytics & Benchmarks")
+    st.stop()
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -52,20 +57,34 @@ with st.sidebar:
         </div>
     </div>
 </div>
-<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 8px;"></div>
-<div style="padding:0 16px;">
 """, unsafe_allow_html=True)
-    render_theme_toggle(key="theme_toggle_sidebar")
+
+    user = st.session_state.get("user") or {}
+    user_name = user.get("full_name", "Safety Inspector")
+    user_role = user.get("role", "Active Inspector")
+    st.markdown(f"""
+<div style="padding:10px 14px;margin:0 16px 10px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.22);border-radius:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <span style="font-size:0.65rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Authorized User</span>
+        <span class="dot dot-live"></span>
+    </div>
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary);">{user_name}</div>
+    <div style="font-size:0.68rem;color:var(--text-muted);">{user_role}</div>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("<div style='padding:0 16px;'>", unsafe_allow_html=True)
     navigation_tip()
+    if st.button("Sign Out", key="stats_signout_sidebar", use_container_width=True):
+        st.session_state.authenticated = False
+        st.session_state.user = None
+        st.session_state.active_view = "landing"
+        st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-# ── Header ────────────────────────────────────────────────────────────────────
-hdr_l, hdr_r = st.columns([10, 1])
-with hdr_l:
-    mission_control_header("Safety Analytics & Research Metrics", "Empirical validation benchmarks, compliance statistics, and session logs")
-with hdr_r:
-    st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    render_theme_toggle(key="theme_toggle_header")
+# ── Executive Top Nav & Header ───────────────────────────────────────────────
+render_authenticated_nav(current_page="Compliance Analytics", user_info=st.session_state.get("user"))
+mission_control_header("Safety Analytics & Research Metrics", "Empirical validation benchmarks, compliance statistics, and session logs")
 
 # ── DB warning ────────────────────────────────────────────────────────────────
 if not DB_AVAILABLE:

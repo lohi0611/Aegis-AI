@@ -105,3 +105,29 @@ class ViolationEvent(Base):
             "snapshot_path": self.snapshot_path,
             "status": self.status,
         }
+
+
+class User(Base):
+    """Represents an application user / safety inspector."""
+
+    __tablename__ = "users"
+
+    user_id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    full_name = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    salt = Column(String(64), nullable=False)
+    role = Column(String(64), nullable=False, default="Safety Inspector")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "user_id": self.user_id,
+            "email": self.email,
+            "full_name": self.full_name,
+            "role": self.role,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+        }
+

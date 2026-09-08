@@ -1,14 +1,15 @@
-@echo off
-d:
-cd \iomp\AI-Powered-Safety-At-Workplace-main
+cd /d "%~dp0"
 echo =======================================================
 echo    🛡️ AEGIS-AI | SAFETY EYE COMMAND CENTER
 echo =======================================================
 echo.
-echo Launching...
+echo Launching AEGIS Safety Platform...
+echo.
 
-:: Use the exact command that we verified manually
-".venv\Scripts\python.exe" -m streamlit run "dashboard\app.py"
+if exist ".venv\Scripts\python.exe" (
+    ".venv\Scripts\python.exe" -m streamlit run "app.py"
+) else (
+    python -m streamlit run "app.py"
+)
 
-:: Stay open if it finishes
 pause

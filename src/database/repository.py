@@ -3,13 +3,15 @@ AEGIS — Database Repository & Data Access Layer
 Encapsulates CRUD operations, session lifecycle, and analytics aggregation queries.
 """
 
+import hashlib
+import secrets
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import desc, func
 
 from src.database.connection import init_database
-from src.database.models import ScanSession, ViolationEvent
+from src.database.models import ScanSession, User, ViolationEvent
 
 # Global database access objects
 _engine = None
@@ -255,3 +257,111 @@ def get_analytics() -> Dict[str, Any]:
         }
     finally:
         db.close()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  USER AUTHENTICATION & MANAGEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+def hash_password(password: str, salt: Optional[str] = None) -> Tuple[str, str]:
+    """
+    Cryptographically hash password using PBKDF2-HMAC-SHA256 (100k iterations).
+    Returns (hex_hash, hex_salt).
+    """
+    if salt is None:
+        salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        100_000,
+    )
+    return key.hex(), salt
+
+
+def verify_password(password: str, password_hash: str, salt: str) -> bool:
+    """Verify password against stored hash and salt."""
+    calc_hash, _ = hash_password(password, salt=salt)
+    return secrets.compare_digest(calc_hash, password_hash)
+
+
+def register_user(
+    email: str,
+    password: str,
+    full_name: str,
+    role: str = "Safety Inspector",
+) -> Optional[Dict[str, Any]]:
+    """Register a new user record. Returns user dict on success, None if email taken."""
+    db = get_db_session()
+    try:
+        clean_email = email.strip().lower()
+        existing = db.query(User).filter(func.lower(User.email) == clean_email).first()
+        if existing:
+            return None
+
+        pwd_hash, salt = hash_password(password)
+        user = User(
+            email=clean_email,
+            full_name=full_name.strip(),
+            password_hash=pwd_hash,
+            salt=salt,
+            role=role.strip(),
+            created_at=datetime.utcnow(),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user.to_dict()
+    except Exception as e:
+        db.rollback()
+        print(f"[AEGIS-DB Error] register_user: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
+    """Authenticate user credentials. Returns user dict on success, None on failure."""
+    db = get_db_session()
+    try:
+        clean_email = email.strip().lower()
+        user = db.query(User).filter(func.lower(User.email) == clean_email).first()
+        if not user:
+            return None
+
+        if verify_password(password, user.password_hash, user.salt):
+            user.last_login = datetime.utcnow()
+            db.commit()
+            return user.to_dict()
+        return None
+    except Exception as e:
+        print(f"[AEGIS-DB Error] authenticate_user: {e}")
+        return None
+    finally:
+        db.close()
+
+
+def seed_default_user_if_empty():
+    """Seed a default administrative user if no users exist."""
+    db = get_db_session()
+    try:
+        count = db.query(func.count(User.user_id)).scalar()
+        if count == 0:
+            pwd_hash, salt = hash_password("Admin@1234")
+            admin = User(
+                email="admin@aegis.ai",
+                full_name="Alex Vance (Chief Safety Officer)",
+                password_hash=pwd_hash,
+                salt=salt,
+                role="Site EHS Director",
+                created_at=datetime.utcnow(),
+            )
+            db.add(admin)
+            db.commit()
+            print("[AEGIS] Default demo user seeded: admin@aegis.ai / Admin@1234")
+    except Exception as e:
+        db.rollback()
+        print(f"[AEGIS-DB Error] seed_default_user_if_empty: {e}")
+    finally:
+        db.close()
+

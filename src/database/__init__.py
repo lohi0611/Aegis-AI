@@ -3,8 +3,9 @@ AEGIS Database Package
 """
 
 from src.database.connection import get_default_db_url, init_database
-from src.database.models import Base, ScanSession, ViolationEvent
+from src.database.models import Base, ScanSession, User, ViolationEvent
 from src.database.repository import (
+    authenticate_user,
     close_session,
     create_session,
     get_analytics,
@@ -12,6 +13,8 @@ from src.database.repository import (
     get_recent_sessions,
     get_session_violations,
     log_violation,
+    register_user,
+    seed_default_user_if_empty,
 )
 
 __all__ = [
@@ -20,6 +23,7 @@ __all__ = [
     "Base",
     "ScanSession",
     "ViolationEvent",
+    "User",
     "get_db_session",
     "create_session",
     "close_session",
@@ -27,4 +31,8 @@ __all__ = [
     "get_recent_sessions",
     "get_session_violations",
     "get_analytics",
+    "authenticate_user",
+    "register_user",
+    "seed_default_user_if_empty",
 ]
+

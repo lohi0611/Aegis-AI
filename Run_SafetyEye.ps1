@@ -4,8 +4,15 @@ Write-Host "=======================================================" -Foreground
 Write-Host ""
 Write-Host "Launching... (Please wait a few seconds)"
 
-# Start the application using absolute paths
-& "d:\iomp\AI-Powered-Safety-At-Workplace-main\.venv\Scripts\python.exe" -m streamlit run "d:\iomp\AI-Powered-Safety-At-Workplace-main\dashboard\app.py"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+Set-Location $scriptDir
+
+$venvPython = Join-Path $scriptDir ".venv\Scripts\python.exe"
+if (Test-Path $venvPython) {
+    & $venvPython -m streamlit run (Join-Path $scriptDir "app.py")
+} else {
+    python -m streamlit run (Join-Path $scriptDir "app.py")
+}
 
 Write-Host ""
 Write-Host "Application session ended. Press any key to close..."

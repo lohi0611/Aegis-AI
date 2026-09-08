@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import io
 import sys
@@ -44,8 +45,11 @@ from ui_utils import (
     navigation_tip, standby_placeholder, scan_complete_placeholder,
     mission_control_header, render_theme_toggle, section_label,
     get_plotly_layout_defaults, ICONS, render_cctv_hud_header,
+    render_authenticated_nav,
     ORANGE, RED, GREEN, TEAL, AMBER, BLUE,
 )
+from components.landing import render_landing_page
+from components.auth import render_auth_page
 # ── Safe detector import ──────────────────────────────────────────────────────
 try:
     from detect import PPEDetector
@@ -225,6 +229,10 @@ _defaults = {
     "scan_start_time":      None,
     "tracker":              None,
     "aegis_theme":          "dark",
+    "authenticated":        False,
+    "user":                 None,
+    "active_view":          "landing",
+    "demo_prefill":         False,
     # Advanced settings (persist across reruns)
     "adv_conf":             0.25,
     "adv_thickness":        2,
@@ -234,6 +242,17 @@ _defaults = {
 for k, v in _defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  ROUTER: LANDING & AUTH FLOW (Protected Gateway)
+# ─────────────────────────────────────────────────────────────────────────────
+if not st.session_state.get("authenticated", False):
+    active_view = st.session_state.get("active_view", "landing")
+    if active_view in ("login", "signup"):
+        render_auth_page(initial_mode=active_view)
+    else:
+        render_landing_page()
+    st.stop()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -255,7 +274,20 @@ with st.sidebar:
         </div>
     </div>
 </div>
-<div style="height:1px;background:linear-gradient(90deg,transparent,rgba(249,168,37,0.15),transparent);margin:0 0 4px;"></div>
+""", unsafe_allow_html=True)
+
+    user = st.session_state.get("user") or {}
+    user_name = user.get("full_name", "Safety Inspector")
+    user_role = user.get("role", "Active Inspector")
+    st.markdown(f"""
+<div style="padding:10px 14px;margin:4px 16px 12px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.22);border-radius:10px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+        <span style="font-size:0.65rem;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Authorized User</span>
+        <span class="dot dot-live"></span>
+    </div>
+    <div style="font-size:0.82rem;font-weight:700;color:var(--text-primary);">{user_name}</div>
+    <div style="font-size:0.68rem;color:var(--text-muted);">{user_role}</div>
+</div>
 """, unsafe_allow_html=True)
 
     st.markdown("<div style='padding:0 16px;'>", unsafe_allow_html=True)
@@ -374,17 +406,14 @@ with st.sidebar:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  HEADER ROW (brand + theme toggle)
+#  EXECUTIVE AUTHENTICATED NAVIGATION & STATUS
 # ─────────────────────────────────────────────────────────────────────────────
-hdr_left, hdr_right = st.columns([10, 1])
-with hdr_left:
-    render_brand_header(
-        is_scanning=st.session_state.running,
-        db_ok=DB_AVAILABLE,
-    )
-with hdr_right:
-    st.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    render_theme_toggle(key="theme_toggle_header")
+render_authenticated_nav(current_page="Live Safety Monitor", user_info=st.session_state.get("user"))
+
+render_brand_header(
+    is_scanning=st.session_state.running,
+    db_ok=DB_AVAILABLE,
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -495,7 +524,7 @@ def _save_snapshot_bg(frame_bgr: np.ndarray, snap_abs: str):
 
 def log_violation(tracker, w_id, d, frame_number, annotated_frame):
     """
-    Check cooldown → log to session_state, CSV, and DB.
+    Check cooldown -> log to session_state, CSV, and DB.
     Snapshot is saved in a background thread to avoid blocking the camera feed.
     Returns the row if a new violation was logged, else None.
     """

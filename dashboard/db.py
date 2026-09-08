@@ -22,10 +22,19 @@ try:
         get_recent_sessions,
         get_session_violations,
         get_analytics,
+        authenticate_user,
+        register_user,
+        seed_default_user_if_empty,
         ScanSession,
         ViolationEvent,
+        User,
     )
     DB_AVAILABLE = True
+    # Seed default admin user on DB init
+    try:
+        seed_default_user_if_empty()
+    except Exception as _seed_err:
+        print(f"[AEGIS DB Warning] Seed error: {_seed_err}")
 except Exception as _e:
     print(f"[AEGIS DB Warning] Failed to initialize SQLAlchemy DB: {_e}")
     DB_AVAILABLE = False
@@ -50,3 +59,39 @@ except Exception as _e:
             "total_scans": 0, "total_violations": 0, "violations_today": 0,
             "critical_violations": 0, "most_common": "N/A", "by_type": {}, "daily": [], "safety_score": 100.0
         }
+
+    # In-memory auth fallback for headless environments
+    _MEM_USERS = {
+        "admin@aegis.ai": {
+            "password": "Admin@1234",
+            "full_name": "Alex Vance (Chief Safety Officer)",
+            "role": "Site EHS Director",
+        }
+    }
+
+    def authenticate_user(email: str, password: str):
+        clean = email.strip().lower()
+        if clean in _MEM_USERS and _MEM_USERS[clean]["password"] == password:
+            return {
+                "user_id": 1,
+                "email": clean,
+                "full_name": _MEM_USERS[clean]["full_name"],
+                "role": _MEM_USERS[clean]["role"],
+            }
+        return None
+
+    def register_user(email: str, password: str, full_name: str, role: str = "Safety Inspector"):
+        clean = email.strip().lower()
+        if clean in _MEM_USERS:
+            return None
+        _MEM_USERS[clean] = {"password": password, "full_name": full_name, "role": role}
+        return {
+            "user_id": len(_MEM_USERS),
+            "email": clean,
+            "full_name": full_name,
+            "role": role,
+        }
+
+    def seed_default_user_if_empty():
+        pass
+
