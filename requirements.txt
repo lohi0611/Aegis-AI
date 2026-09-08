@@ -10,3 +10,4 @@ torchvision
 SQLAlchemy>=2.0.0
 gdown
 pytest
+pyyaml

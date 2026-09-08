@@ -35,7 +35,6 @@ jobs:
           pip install pytest pytest-cov pytest-xdist
 
       - name: Run unit tests with coverage
-        run: |
           pytest tests/ \
             --cov=src \
             --cov-report=term-missing \
@@ -43,8 +42,7 @@ jobs:
             --cov-fail-under=60 \
             -v \
             --tb=short \
-            -x \
-            --ignore=tests/test_config.py
+            -x
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
