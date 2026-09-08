@@ -299,7 +299,7 @@ with st.sidebar:
         '① &nbsp;Choose video source</div>',
         unsafe_allow_html=True,
     )
-    sources = ["Laptop Camera (Browser)"]
+    sources = ["Laptop Camera (Browser)", "Native Camera (Snapshot/Stream)"]
     if sample_video:
         sources.append("Sample Video")
     sources.append("Upload Video File")
@@ -339,26 +339,33 @@ with st.sidebar:
             options=VIOLATION_CLASSES,
             default=st.session_state.adv_alert_classes,
         )
+        st.session_state.adv_cam_idx = st.number_input(
+            "OpenCV Webcam Index", min_value=0, max_value=5,
+            value=st.session_state.get("adv_cam_idx", 0), step=1,
+            help="Camera device index (0 for default built-in webcam, 1 or 2 for external USB camera)"
+        )
         st.session_state.adv_use_dshow = st.checkbox(
-            "Enhanced webcam access (Windows)", value=st.session_state.adv_use_dshow)
+            "Enhanced webcam access (DirectShow)", value=st.session_state.adv_use_dshow)
 
     # Read advanced settings into local vars used by the rest of the page
     confidence_slider = st.session_state.adv_conf
     line_thickness    = st.session_state.adv_thickness
     alert_classes     = st.session_state.adv_alert_classes or VIOLATION_CLASSES
+    webcam_idx        = int(st.session_state.get("adv_cam_idx", 0))
     use_dshow         = st.session_state.adv_use_dshow
 
     # ── Start / Stop logic ──────────────────────────────────────────────────
     if start_btn:
         source_map = {
-            "Laptop Camera (Browser)": "laptop_camera",
-            "Sample Video":            "sample_video",
-            "Upload Video File":       "uploaded_video",
-            "Local Webcam (OpenCV)":   "local_webcam",
+            "Laptop Camera (Browser)":         "laptop_camera",
+            "Native Camera (Snapshot/Stream)": "native_camera",
+            "Sample Video":                    "sample_video",
+            "Upload Video File":               "uploaded_video",
+            "Local Webcam (OpenCV)":           "local_webcam",
         }
         scan_type   = source_map.get(video_source, "unknown")
         source_name = (uploaded_file.name if uploaded_file
-                       else ("browser_camera" if video_source == "Laptop Camera (Browser)"
+                       else ("browser_camera" if "Camera" in video_source
                              else (os.path.basename(sample_video) if sample_video else "unknown")))
 
         db_sid = create_scan_session(scan_type, source_name)
@@ -548,8 +555,6 @@ def log_violation(tracker, w_id, d, frame_number, annotated_frame):
     snap_id  = f"snap_{ts_raw.strftime('%Y%m%d_%H%M%S_%f')}.jpg"
     snap_abs = os.path.join(SNAP_DIR, snap_id)   # absolute path used everywhere
     try:
-        # YOLO .plot() always returns BGR — save directly, no conversion needed.
-        # The previous cv2.COLOR_RGB2BGR on a BGR frame was causing greyscale output.
         t = threading.Thread(target=_save_snapshot_bg, args=(annotated_frame, snap_abs), daemon=True)
         t.start()
     except Exception:
@@ -623,7 +628,18 @@ def refresh_ui(annotated, fps, total_frames, fps_history, time_history):
     with cctv_header_ph:
         render_cctv_hud_header(source_name=video_source, is_live=True, fps_val=fps)
 
-    video_ph.image(annotated, use_container_width=True)
+    # YOLO results[0].plot() returns BGR numpy array. Convert to RGB for correct browser rendering.
+    display_frame = annotated
+    if isinstance(annotated, np.ndarray) and len(annotated.shape) == 3 and annotated.shape[2] == 3:
+        if CV2_OK and cv2 is not None:
+            try:
+                display_frame = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+            except Exception:
+                display_frame = annotated[:, :, ::-1]
+        else:
+            display_frame = annotated[:, :, ::-1]
+
+    video_ph.image(display_frame, use_container_width=True)
 
     breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
     render_kpis(breaches, critical, total_frames, fps, score, dur_str)
@@ -700,7 +716,7 @@ def draw_empty_perf():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  DETECTION ENGINE — LAPTOP CAMERA (BROWSER)
+#  DETECTION ENGINE — LAPTOP CAMERA (BROWSER WEBRTC)
 # ─────────────────────────────────────────────────────────────────────────────
 if video_source == "Laptop Camera (Browser)":
     if st.session_state.running:
@@ -713,9 +729,17 @@ if video_source == "Laptop Camera (Browser)":
             if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
                 video_ph.image(st.session_state.last_annotated_frame, use_container_width=True)
             else:
-                video_ph.info("📹 Connecting to laptop camera… Please allow camera access in your browser.")
+                with video_ph.container():
+                    st.info("📹 **Connecting to laptop camera…** Please allow camera access in your browser pop-up.")
+                    st.markdown("""
+<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 12px;background:var(--bg-card-2);border-radius:8px;border:1px solid var(--border-subtle);margin-top:6px;">
+    💡 <b>Browser Camera Tip:</b> Click the lock / camera icon in your browser address bar and select <b>Allow Camera</b>.<br/>
+    Alternatively, select <b>'Native Camera (Snapshot/Stream)'</b> or <b>'Local Webcam (OpenCV)'</b> in the sidebar.
+</div>
+""", unsafe_allow_html=True)
         elif isinstance(val, str) and val.startswith("ERROR:"):
             st.error(f"Webcam Error: {val}")
+            st.info("💡 Tip: Try switching to **'Native Camera (Snapshot/Stream)'** in the sidebar video source dropdown.")
             st.session_state.running = False
             st.rerun()
         elif isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
@@ -754,11 +778,9 @@ if video_source == "Laptop Camera (Browser)":
                                        use_container_width=True)
                     st.rerun()
 
-
                 annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                         alert_classes=alert_classes)
                 st.session_state.last_annotated_frame = annotated
-
 
                 rects       = [d["bbox"] for d in detections]
                 class_names = [d["class_name"] for d in detections]
@@ -788,13 +810,59 @@ if video_source == "Laptop Camera (Browser)":
 
                 refresh_ui(annotated, fps, st.session_state.total_frames_scanned,
                            st.session_state.fps_history, st.session_state.time_history)
-    else:
-        pass   # handled in standby/post-scan block below
-
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  DETECTION ENGINE — VIDEO / LOCAL WEBCAM
+#  DETECTION ENGINE — NATIVE CAMERA INPUT (BUILT-IN STREAMLIT WEBCAM)
+# ─────────────────────────────────────────────────────────────────────────────
+elif video_source == "Native Camera (Snapshot/Stream)":
+    if st.session_state.running:
+        with st.spinner("⛑ Loading AEGIS detection model…"):
+            detector = _load_detector(confidence_slider)
+        with cctv_header_ph:
+            render_cctv_hud_header(source_name=video_source, is_live=True, fps_val=1.0)
+
+        with video_ph.container():
+            cam_buffer = st.camera_input("📷 Real-Time Camera Stream / Snapshot", key="native_webcam_input")
+
+        if cam_buffer is not None:
+            raw_bytes = cam_buffer.getvalue()
+            pil_img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
+            frame = np.array(pil_img)
+
+            st.session_state.total_frames_scanned += 1
+            annotated, detections = detector.detect(frame, line_width=line_thickness,
+                                                    alert_classes=alert_classes)
+            st.session_state.last_annotated_frame = annotated
+
+            rects       = [d["bbox"] for d in detections]
+            class_names = [d["class_name"] for d in detections]
+
+            if not st.session_state.tracker:
+                st.session_state.tracker = CentroidTracker()
+            tracker      = st.session_state.tracker
+            assigned_ids = tracker.update(rects, class_names)
+
+            for idx, d in enumerate(detections):
+                if d["class_name"] in alert_classes:
+                    w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
+                    log_violation(tracker, w_id, d,
+                                  st.session_state.total_frames_scanned, annotated)
+
+            # Display annotated result below camera input
+            with video_ph.container():
+                st.image(annotated, caption="🔍 Real-Time AI Inference Result", use_container_width=True)
+
+            breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
+            render_kpis(breaches, critical, st.session_state.total_frames_scanned, 1.0, score, dur_str)
+            with status_ph:
+                draw_site_status(breaches, critical)
+            with sys_status_ph:
+                draw_system_status(DB_AVAILABLE, True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  DETECTION ENGINE — VIDEO / LOCAL WEBCAM (OPENCV)
 # ─────────────────────────────────────────────────────────────────────────────
 elif st.session_state.running:
     if not CV2_OK:
@@ -825,7 +893,7 @@ elif st.session_state.running:
             st.session_state.running = False
             st.stop()
     elif video_source == "Local Webcam (OpenCV)":
-        cap_src = 0
+        cap_src = int(st.session_state.get("adv_cam_idx", 0))
 
     if cap_src is None:
         if sample_video:
@@ -837,17 +905,21 @@ elif st.session_state.running:
             st.stop()
 
     # Open capture
-    if isinstance(cap_src, int) and use_dshow:
-        cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
+    cap = None
+    if isinstance(cap_src, int):
+        if use_dshow:
+            cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
+        if cap is None or not cap.isOpened():
+            cap = cv2.VideoCapture(cap_src)
     else:
         cap = cv2.VideoCapture(cap_src)
 
     if not cap.isOpened() and cap_src != sample_video and sample_video:
-        st.info("Local webcam not available on cloud. Falling back to sample video.")
+        st.info("Local webcam not available. Falling back to sample video.")
         cap = cv2.VideoCapture(sample_video)
 
     if not cap.isOpened():
-        st.error("Unable to open video stream.")
+        st.error(f"Unable to open video stream from source (index: {cap_src}). Please ensure camera is connected and not occupied by another app.")
         st.session_state.running = False
         st.stop()
 

@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Auto Camera Component</title>
+    <title>AEGIS Live Camera Streamer</title>
     <style>
         body {
             margin: 0;
@@ -11,30 +11,56 @@
             background: transparent;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
-        .cam-badge {
+        .cam-badge-container {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
+            gap: 8px;
+            padding: 4px 12px;
             font-size: 11px;
-            font-weight: 500;
-            color: #81C784;
-            background: rgba(76, 175, 80, 0.08);
-            border-radius: 4px;
-            border: 1px solid rgba(76, 175, 80, 0.2);
+            font-weight: 600;
+            color: #10B981;
+            background: rgba(16, 185, 129, 0.08);
+            border-radius: 6px;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        .cam-badge-error {
+            color: #EF4444;
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        .cam-badge-warn {
+            color: #F59E0B;
+            background: rgba(245, 158, 11, 0.08);
+            border-color: rgba(245, 158, 11, 0.25);
         }
         .dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
-            background: #4CAF50;
-            box-shadow: 0 0 6px #4CAF50;
+            background: #10B981;
+            box-shadow: 0 0 6px #10B981;
             animation: pulse 1.5s infinite;
         }
+        .dot-error { background: #EF4444; box-shadow: 0 0 6px #EF4444; }
+        .dot-warn { background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
         @keyframes pulse {
             0% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.4; transform: scale(0.85); }
             100% { opacity: 1; transform: scale(1); }
+        }
+        .retry-btn {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.5);
+            color: #FBBF24;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        .retry-btn:hover {
+            background: rgba(245, 158, 11, 0.35);
         }
     </style>
     <script>
@@ -48,54 +74,97 @@
 
         window.addEventListener("load", function() {
             sendMessage("streamlit:componentReady", { apiVersion: 1 });
-            sendMessage("streamlit:setFrameHeight", { height: 28 });
+            sendMessage("streamlit:setFrameHeight", { height: 32 });
         });
     </script>
 </head>
 <body>
-    <div class="cam-badge">
-        <span class="dot"></span>
-        <span id="cam-status">Camera stream active</span>
+    <div id="badge-container" class="cam-badge-container cam-badge-warn">
+        <span id="dot" class="dot dot-warn"></span>
+        <span id="cam-status">Requesting Camera Access…</span>
+        <button id="retry-btn" class="retry-btn" style="display:none;" onclick="initCamera()">Retry</button>
     </div>
 
-    <video id="video" width="640" height="480" autoplay playsinline muted style="display:none;"></video>
-    <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
+    <!-- Keep video and canvas offscreen but in DOM render tree so browser decodes active stream -->
+    <video id="video" autoplay playsinline muted style="position:fixed;top:-9999px;left:-9999px;width:640px;height:480px;opacity:0;pointer-events:none;"></video>
+    <canvas id="canvas" width="640" height="480" style="position:fixed;top:-9999px;left:-9999px;width:640px;height:480px;opacity:0;pointer-events:none;"></canvas>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         const statusEl = document.getElementById('cam-status');
+        const badgeContainer = document.getElementById('badge-container');
+        const dot = document.getElementById('dot');
+        const retryBtn = document.getElementById('retry-btn');
+
         let isReady = false;
         let inFlight = false;
         let lastSendTime = 0;
+        let streamTrack = null;
 
-        // Initialize camera
-        navigator.mediaDevices.getUserMedia({
-            video: {
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                facingMode: "user"
-            },
-            audio: false
-        })
-        .then(function(s) {
-            video.srcObject = s;
-            video.setAttribute("playsinline", true);
-            video.play().then(function() {
-                isReady = true;
-                if (statusEl) statusEl.textContent = "Live Camera Streaming";
-                captureAndSend();
-            }).catch(function(e) {
-                isReady = true;
-                captureAndSend();
+        function setStatus(text, type) {
+            if (statusEl) statusEl.textContent = text;
+            if (badgeContainer) {
+                badgeContainer.className = "cam-badge-container " + (type === "ok" ? "" : (type === "error" ? "cam-badge-error" : "cam-badge-warn"));
+            }
+            if (dot) {
+                dot.className = "dot " + (type === "ok" ? "" : (type === "error" ? "dot-error" : "dot-warn"));
+            }
+            if (retryBtn) {
+                retryBtn.style.display = (type === "error") ? "inline-block" : "none";
+            }
+        }
+
+        function initCamera() {
+            setStatus("Connecting to camera…", "warn");
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                const msg = "WebRTC Camera API not supported in this browser environment.";
+                setStatus(msg, "error");
+                sendMessage("streamlit:setComponentValue", { value: "ERROR: " + msg });
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640, max: 1280 },
+                    height: { ideal: 480, max: 720 },
+                    facingMode: "user"
+                },
+                audio: false
+            })
+            .then(function(s) {
+                streamTrack = s;
+                video.srcObject = s;
+                video.setAttribute("playsinline", true);
+                video.setAttribute("muted", true);
+                
+                video.onloadedmetadata = function() {
+                    video.play().then(function() {
+                        isReady = true;
+                        setStatus("Live Camera Streaming Active", "ok");
+                        captureAndSend();
+                    }).catch(function(e) {
+                        isReady = true;
+                        setStatus("Live Camera Streaming", "ok");
+                        captureAndSend();
+                    });
+                };
+            })
+            .catch(function(err) {
+                console.error("Camera getUserMedia error:", err);
+                let friendlyMsg = err.name + ": " + err.message;
+                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                    friendlyMsg = "Camera permission denied. Please allow camera access in browser site settings.";
+                } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+                    friendlyMsg = "No webcam device detected on your system.";
+                } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
+                    friendlyMsg = "Webcam is already in use by another application.";
+                }
+                setStatus(friendlyMsg, "error");
+                sendMessage("streamlit:setComponentValue", { value: "ERROR: " + friendlyMsg });
             });
-        })
-        .catch(function(err) {
-            console.error("Camera error:", err);
-            if (statusEl) statusEl.textContent = "Camera Error: " + err.message;
-            sendMessage("streamlit:setComponentValue", { value: "ERROR: " + err.name + " - " + err.message });
-        });
+        }
 
         function captureAndSend() {
             if (!isReady) return;
@@ -107,9 +176,15 @@
             lastSendTime = now;
             
             try {
-                if (video.readyState >= 2) {
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    canvas.width = 640;
+                    canvas.height = 480;
+                    ctx.drawImage(video, 0, 0, 640, 480);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.40);
+                    sendMessage("streamlit:setComponentValue", { value: base64 });
+                } else if (video.readyState >= 2) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.35);
+                    const base64 = canvas.toDataURL('image/jpeg', 0.40);
                     sendMessage("streamlit:setComponentValue", { value: base64 });
                 } else {
                     inFlight = false;
@@ -125,17 +200,20 @@
             if (isReady) {
                 captureAndSend();
             }
-        }, 80);
+        }, 90);
 
         // Listen for Streamlit render completion
         window.addEventListener("message", function(event) {
             if (event.data && event.data.type === "streamlit:render") {
                 inFlight = false;
                 if (isReady) {
-                    setTimeout(captureAndSend, 20);
+                    setTimeout(captureAndSend, 15);
                 }
             }
         });
+
+        // Start camera on load
+        initCamera();
     </script>
 </body>
 </html>
