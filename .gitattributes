@@ -1,0 +1,36 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Source code — LF for cross-platform CI compatibility
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.sh text eol=lf
+*.csv text eol=lf
+
+# Windows scripts — CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files — no diff, no merge, no line-ending conversion
+*.pt binary
+*.pth binary
+*.onnx binary
+*.h5 binary
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar.gz binary
+*.pkl binary

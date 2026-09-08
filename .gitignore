@@ -1,37 +1,91 @@
-# Python
-.venv/
-__pycache__/
-*.pyc
-.ipynb_checkpoints/
+# ========================
+# AEGIS-AI .gitignore
+# ========================
 
-# Virtual Environments
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ---------- Virtual Environments ----------
+.venv/
 venv/
 ENV/
+env/
 
-# Large Model Weights (Keep if you want to push to git, but recommended to ignore if huge)
-# *.pt
+# ---------- Jupyter ----------
+.ipynb_checkpoints/
 
-# Project Specific
+# ---------- Datasets & Training Data ----------
+infosys/
+data/
+datasets/
+
+# ---------- Model Weights ----------
+*.pt
+*.pth
+*.onnx
+*.h5
+*.tflite
+*.weights
+*.pb
+# Exception: keep model metadata
+!models/metadata.json
+
+# ---------- Video & Media ----------
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.jfif
+
+# ---------- YOLO / Training Runs ----------
+runs/
+
+# ---------- Coverage & Test Artifacts ----------
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+
+# ---------- Node / JS ----------
+node_modules/
+package-lock.json
+
+# ---------- Snapshots & Uploads ----------
 snapshots/
-violations.csv
 uploaded_video.mp4
+violations.csv
 alert_log.csv
 alert_summary.txt
 
-# Node / System
-node_modules/
+# ---------- IDE ----------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---------- OS ----------
 .DS_Store
 Thumbs.db
-
-# OS files
 .env
 .env.local
+Desktop.ini
 
-# Test / Evaluation Artifacts
-.coverage
-htmlcov/
-.pytest_cache/
-runs/
+# ---------- Streamlit ----------
+.streamlit/
+
+# ---------- Database ----------
 *.sqlite
+*.sqlite3
 *.db
-
