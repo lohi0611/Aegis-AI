@@ -327,6 +327,8 @@
             resizeOverlay();
             requestAnimationFrame(drawHUDLoop);
             setTimeout(function() { captureAndSend(false); }, 800);
+        }
+
         let currentDetections = [];
 
         // Listen for Streamlit render completion and incoming detection bounding boxes
@@ -427,7 +429,7 @@
         function captureAndSend(force) {
             if (!isReady) return;
             const now = Date.now();
-            if (!force && (now - lastSendTime < 1000)) {
+            if (!force && (now - lastSendTime < 750)) {
                 return;
             }
             lastSendTime = now;
@@ -440,12 +442,23 @@
                 if (video.videoWidth > 0 && video.videoHeight > 0) {
                     ctx.drawImage(video, 0, 0, 640, 480);
                 } else {
-                    ctx.fillStyle = "#0A0E17";
+                    // Synthetic worksite background for simulation mode
+                    ctx.fillStyle = "#0F172A";
                     ctx.fillRect(0, 0, 640, 480);
+                    // Floor
+                    ctx.fillStyle = "#1E293B";
+                    ctx.fillRect(40, 360, 560, 8);
+                    // Worker silhouette
+                    ctx.fillStyle = "#334155";
+                    ctx.beginPath();
+                    ctx.arc(320, 180, 28, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillRect(290, 215, 60, 130);
+                    // Draw overlay on top
                     ctx.drawImage(overlay, 0, 0, 640, 480);
                 }
 
-                const base64 = captureCanvas.toDataURL('image/jpeg', 0.50);
+                const base64 = captureCanvas.toDataURL('image/jpeg', 0.55);
                 sendMessage("streamlit:setComponentValue", { value: base64 });
             } catch (err) {
                 console.error("Frame send error:", err);

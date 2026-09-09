@@ -735,12 +735,14 @@ def draw_empty_perf():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  DETECTION ENGINE — LAPTOP CAMERA (BROWSER WEBRTC)
+#  DETECTION ENGINES (ACTIVE MONITORING SESSION)
 # ─────────────────────────────────────────────────────────────────────────────
-if video_source == "Laptop Camera (Browser)":
-    if st.session_state.running:
+if st.session_state.running:
+    if video_source == "Laptop Camera (Browser)":
         with st.spinner("⛑ Loading AEGIS detection model…"):
             detector = _load_detector(confidence_slider)
+        with cctv_header_ph:
+            render_cctv_hud_header(source_name=video_source, is_live=True, fps_val=st.session_state.fps_history[-1] if st.session_state.fps_history else 1.0)
         with video_ph.container():
             val = auto_camera(
                 detections=st.session_state.get("last_detections", []),
@@ -846,19 +848,30 @@ if video_source == "Laptop Camera (Browser)":
                         use_container_width=True,
                     )
 
+                # Update perf chart
+                perf_ph.plotly_chart(
+                    _perf_chart(st.session_state.fps_history, st.session_state.time_history,
+                                key="fps_browser_cam"),
+                    use_container_width=True,
+                    config={"displayModeBar": False},
+                    key="fps_chart_browser_cam",
+                )
+        else:
+            if st.session_state.get("last_annotated_frame") is not None:
+                cam_badge_ph.image(
+                    st.session_state.last_annotated_frame,
+                    caption="🎯 Real-Time AI Detection Overlay — Live Worksite PPE Scan",
+                    use_container_width=True
+                )
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  DETECTION ENGINE — NATIVE CAMERA INPUT (BUILT-IN STREAMLIT WEBCAM)
-# ─────────────────────────────────────────────────────────────────────────────
-elif video_source == "Native Camera (Snapshot/Stream)":
-    if st.session_state.running:
+    elif video_source == "Native Camera (Snapshot/Stream)":
         with st.spinner("⛑ Loading AEGIS detection model…"):
             detector = _load_detector(confidence_slider)
         with cctv_header_ph:
             render_cctv_hud_header(source_name=video_source, is_live=True, fps_val=1.0)
 
         with video_ph.container():
+            st.info("📸 **Click 'Take Photo' below** to capture and scan your worksite in real time with AI neural vision.")
             cam_buffer = st.camera_input("📷 Real-Time Camera Stream / Snapshot", key="native_webcam_input")
 
         if cam_buffer is not None:
@@ -870,6 +883,7 @@ elif video_source == "Native Camera (Snapshot/Stream)":
             annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                     alert_classes=alert_classes)
             st.session_state.last_annotated_frame = annotated
+            st.session_state.last_detections      = detections
 
             rects       = [d["bbox"] for d in detections]
             class_names = [d["class_name"] for d in detections]
@@ -885,9 +899,21 @@ elif video_source == "Native Camera (Snapshot/Stream)":
                     log_violation(tracker, w_id, d,
                                   st.session_state.total_frames_scanned, annotated)
 
-            # Display annotated result below camera input
-            with video_ph.container():
-                st.image(annotated, caption="🔍 Real-Time AI Inference Result", use_container_width=True)
+            display_frame = annotated
+            if isinstance(annotated, np.ndarray) and len(annotated.shape) == 3 and annotated.shape[2] == 3:
+                if CV2_OK and cv2 is not None:
+                    try:
+                        display_frame = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+                    except Exception:
+                        display_frame = annotated
+                else:
+                    display_frame = annotated
+
+            cam_badge_ph.image(
+                display_frame,
+                caption="🎯 Real-Time AI Detection Overlay — Live Worksite PPE Scan",
+                use_container_width=True
+            )
 
             breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
             render_kpis(breaches, critical, st.session_state.total_frames_scanned, 1.0, score, dur_str)
@@ -896,153 +922,182 @@ elif video_source == "Native Camera (Snapshot/Stream)":
             with sys_status_ph:
                 draw_system_status(DB_AVAILABLE, True)
 
+            # Update live violation feed
+            with feed_ph:
+                if st.session_state.session_rows:
+                    recent = st.session_state.session_rows[-10:]
+                    for r in reversed(recent):
+                        draw_violation_feed_card(
+                            timestamp=r[0].split(" ")[1],
+                            violation_type=r[2],
+                            worker_id=r[1],
+                            confidence=float(r[3]),
+                            severity=severity_for(r[2]),
+                            status=r[9],
+                        )
+                else:
+                    st.markdown('<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.78rem;">Scanning… No violations detected yet.</div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  DETECTION ENGINE — VIDEO / LOCAL WEBCAM (OPENCV)
-# ─────────────────────────────────────────────────────────────────────────────
-elif st.session_state.running:
-    if not CV2_OK:
-        err_detail = f": {_CV2_ERR_MSG}" if _CV2_ERR_MSG else ""
-        st.error(f"⚠️ Video file decoding requires OpenCV{err_detail}. "
-                 "Please switch video source to 'Laptop Camera (Browser)' which runs directly without OpenCV.")
-        st.session_state.running = False
-        st.stop()
-    detector = _load_detector(confidence_slider)
-    if not st.session_state.get("_model_warm"):
-        with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
-            detector = _load_detector(confidence_slider)
-        st.session_state["_model_warm"] = True
-
-    # Resolve capture source
-    cap_src = None
-    if video_source == "Sample Video" and sample_video:
-        cap_src = sample_video
-    elif video_source == "Upload Video File":
-        if uploaded_file:
-            tmp = tempfile.NamedTemporaryFile(
-                delete=False, suffix=os.path.splitext(uploaded_file.name)[1])
-            tmp.write(uploaded_file.read())
-            tmp.close()
-            cap_src = tmp.name
+            # Update audit log table
+            if st.session_state.session_rows:
+                df = pd.DataFrame(st.session_state.session_rows, columns=CSV_HEADER)
+                df["severity"] = df["violation_type"].apply(severity_for)
+                logs_ph.dataframe(
+                    df[["timestamp", "worker_id", "violation_type", "severity", "confidence", "status"]],
+                    use_container_width=True,
+                )
         else:
-            st.warning("Please upload a video file to begin.")
-            st.session_state.running = False
-            st.stop()
-    elif video_source == "Local Webcam (OpenCV)":
-        cap_src = int(st.session_state.get("adv_cam_idx", 0))
+            if st.session_state.get("last_annotated_frame") is not None:
+                cam_badge_ph.image(
+                    st.session_state.last_annotated_frame,
+                    caption="🎯 Real-Time AI Detection Overlay — Last Worksite PPE Scan",
+                    use_container_width=True
+                )
 
-    if cap_src is None:
-        if sample_video:
-            cap_src = sample_video
-            st.info("Using sample video for demonstration.")
-        else:
-            st.warning("Please upload a video file or select a valid source.")
-            st.session_state.running = False
-            st.stop()
-
-    # Open capture
-    cap = None
-    if isinstance(cap_src, int):
-        if use_dshow:
-            cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
-        if cap is None or not cap.isOpened():
-            cap = cv2.VideoCapture(cap_src)
     else:
-        cap = cv2.VideoCapture(cap_src)
+        # OpenCV / Video Sources
+        if not CV2_OK:
+            err_detail = f": {_CV2_ERR_MSG}" if _CV2_ERR_MSG else ""
+            st.error(f"⚠️ Video file decoding requires OpenCV{err_detail}. "
+                     "Please switch video source to 'Laptop Camera (Browser)' which runs directly without OpenCV.")
+            st.session_state.running = False
+            st.stop()
+        detector = _load_detector(confidence_slider)
+        if not st.session_state.get("_model_warm"):
+            with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
+                detector = _load_detector(confidence_slider)
+            st.session_state["_model_warm"] = True
 
-    if not cap.isOpened() and cap_src != sample_video and sample_video:
-        st.info("Local webcam not available. Falling back to sample video.")
-        cap = cv2.VideoCapture(sample_video)
+        # Resolve capture source
+        cap_src = None
+        if video_source == "Sample Video" and sample_video:
+            cap_src = sample_video
+        elif video_source == "Upload Video File":
+            if uploaded_file:
+                tmp = tempfile.NamedTemporaryFile(
+                    delete=False, suffix=os.path.splitext(uploaded_file.name)[1])
+                tmp.write(uploaded_file.read())
+                tmp.close()
+                cap_src = tmp.name
+            else:
+                st.warning("Please upload a video file to begin.")
+                st.session_state.running = False
+                st.stop()
+        elif video_source == "Local Webcam (OpenCV)":
+            cap_src = int(st.session_state.get("adv_cam_idx", 0))
 
-    if not cap.isOpened():
-        st.error(f"Unable to open video stream from source (index: {cap_src}). Please ensure camera is connected and not occupied by another app.")
-        st.session_state.running = False
-        st.stop()
+        if cap_src is None:
+            if sample_video:
+                cap_src = sample_video
+                st.info("Using sample video for demonstration.")
+            else:
+                st.warning("Please upload a video file or select a valid source.")
+                st.session_state.running = False
+                st.stop()
 
-    local_run_id = st.session_state.current_run_id
-    prev_time    = time.time()
-    total_frames = st.session_state.total_frames_scanned
-    fps_history  = deque(list(st.session_state.fps_history),  maxlen=60)
-    time_history = deque(list(st.session_state.time_history), maxlen=60)
+        # Open capture
+        cap = None
+        if isinstance(cap_src, int):
+            if use_dshow:
+                cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
+            if cap is None or not cap.isOpened():
+                cap = cv2.VideoCapture(cap_src)
+        else:
+            cap = cv2.VideoCapture(cap_src)
 
-    if not st.session_state.tracker:
-        st.session_state.tracker = CentroidTracker()
-    tracker = st.session_state.tracker
+        if not cap.isOpened() and cap_src != sample_video and sample_video:
+            st.info("Local webcam not available. Falling back to sample video.")
+            cap = cv2.VideoCapture(sample_video)
 
-    try:
-        while cap.isOpened() and st.session_state.running:
-            if local_run_id != st.session_state.current_run_id:
-                break
+        if not cap.isOpened():
+            st.error(f"Unable to open video stream from source (index: {cap_src}). Please ensure camera is connected and not occupied by another app.")
+            st.session_state.running = False
+            st.stop()
 
-            ret, frame = cap.read()
-            if not ret:
-                break
+        local_run_id = st.session_state.current_run_id
+        prev_time    = time.time()
+        total_frames = st.session_state.total_frames_scanned
+        fps_history  = deque(list(st.session_state.fps_history),  maxlen=60)
+        time_history = deque(list(st.session_state.time_history), maxlen=60)
 
-            total_frames += 1
-            st.session_state.total_frames_scanned = total_frames
+        if not st.session_state.tracker:
+            st.session_state.tracker = CentroidTracker()
+        tracker = st.session_state.tracker
 
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        try:
+            while cap.isOpened() and st.session_state.running:
+                if local_run_id != st.session_state.current_run_id:
+                    break
 
-            # ── Performance: cap resolution on cloud before inference ─────────
-            if _IS_CLOUD:
-                rgb = cv2.resize(rgb, (640, 480))
+                ret, frame = cap.read()
+                if not ret:
+                    break
 
-            # ── Performance: skip inference on even frames on cloud ───────────
-            if _IS_CLOUD and total_frames % 2 == 0:
-                if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
-                    if total_frames % 6 == 0:  # still refresh display every 6 frames
-                        refresh_ui(st.session_state.last_annotated_frame, fps,
-                                   total_frames, fps_history, time_history)
-                continue
+                total_frames += 1
+                st.session_state.total_frames_scanned = total_frames
 
-            annotated, detections = detector.detect(rgb, line_width=line_thickness,
-                                                    alert_classes=alert_classes)
-            st.session_state.last_annotated_frame = annotated
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+                # ── Performance: cap resolution on cloud before inference ─────────
+                if _IS_CLOUD:
+                    rgb = cv2.resize(rgb, (640, 480))
+
+                # ── Performance: skip inference on even frames on cloud ───────────
+                if _IS_CLOUD and total_frames % 2 == 0:
+                    if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
+                        if total_frames % 6 == 0:  # still refresh display every 6 frames
+                            refresh_ui(st.session_state.last_annotated_frame, fps,
+                                       total_frames, fps_history, time_history)
+                    continue
+
+                annotated, detections = detector.detect(rgb, line_width=line_thickness,
+                                                        alert_classes=alert_classes)
+                st.session_state.last_annotated_frame = annotated
 
 
-            rects       = [d["bbox"] for d in detections]
-            class_names = [d["class_name"] for d in detections]
-            assigned_ids = tracker.update(rects, class_names)
+                rects       = [d["bbox"] for d in detections]
+                class_names = [d["class_name"] for d in detections]
+                assigned_ids = tracker.update(rects, class_names)
 
-            for idx, d in enumerate(detections):
-                if d["class_name"] in alert_classes:
-                    w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
-                    log_violation(tracker, w_id, d, total_frames, annotated)
+                for idx, d in enumerate(detections):
+                    if d["class_name"] in alert_classes:
+                        w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
+                        log_violation(tracker, w_id, d, total_frames, annotated)
 
-            # FPS
-            now = time.time()
-            fps = 1.0 / max(1e-6, now - prev_time)
-            prev_time = now
-            fps_history.append(fps)
-            time_history.append(datetime.now().strftime("%H:%M:%S"))
-            st.session_state.fps_history  = list(fps_history)
-            st.session_state.time_history = list(time_history)
+                # FPS
+                now = time.time()
+                fps = 1.0 / max(1e-6, now - prev_time)
+                prev_time = now
+                fps_history.append(fps)
+                time_history.append(datetime.now().strftime("%H:%M:%S"))
+                st.session_state.fps_history  = list(fps_history)
+                st.session_state.time_history = list(time_history)
 
-            # Render every 3 frames to reduce overhead
-            if total_frames % 3 == 0 or total_frames == 1:
-                refresh_ui(annotated, fps, total_frames, fps_history, time_history)
+                # Render every 3 frames to reduce overhead
+                if total_frames % 3 == 0 or total_frames == 1:
+                    refresh_ui(annotated, fps, total_frames, fps_history, time_history)
 
-            time.sleep(0.005)
+                time.sleep(0.005)
 
-    finally:
-        cap.release()
-        # Mark DB session complete
-        if st.session_state.db_session_id is not None:
-            close_scan_session(
-                st.session_state.db_session_id,
-                total_frames=st.session_state.total_frames_scanned,
-                total_violations=len(st.session_state.session_rows),
-                status="completed",
-            )
-        st.session_state.running = False
-        st.rerun()
+        finally:
+            cap.release()
+            # Mark DB session complete
+            if st.session_state.db_session_id is not None:
+                close_scan_session(
+                    st.session_state.db_session_id,
+                    total_frames=st.session_state.total_frames_scanned,
+                    total_violations=len(st.session_state.session_rows),
+                    status="completed",
+                )
+            st.session_state.running = False
+            st.rerun()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  STANDBY / POST-SCAN STATE
 # ─────────────────────────────────────────────────────────────────────────────
 else:
-    if st.session_state.session_rows:
+    if st.session_state.session_rows or st.session_state.total_frames_scanned > 0:
         # ── Post-scan summary ──────────────────────────────────────────────
         rows     = st.session_state.session_rows
         frames   = st.session_state.total_frames_scanned
