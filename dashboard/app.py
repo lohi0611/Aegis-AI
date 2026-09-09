@@ -182,7 +182,7 @@ class CentroidTracker:
 #  PAGE CONFIG
 # ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="AEGIS | Construction Safety Intelligence",
+    page_title="AEGIS | Real-Time PPE Detection & Construction Safety",
     page_icon="⛑",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -214,6 +214,7 @@ component_dir = os.path.join(current_dir, "camera_component")
 auto_camera   = components.declare_component("auto_camera", path=component_dir)
 
 sample_video_paths = [
+    os.path.join(project_root,  "assets",   "sample_clip.mp4"),
     os.path.join(current_dir,   "uploaded_video.mp4"),
     os.path.join(project_root,  "uploaded_video.mp4"),
     os.path.join(project_root,  "assets",   "finalTest.mp4"),
@@ -738,29 +739,12 @@ def draw_empty_perf():
 # ─────────────────────────────────────────────────────────────────────────────
 if video_source == "Laptop Camera (Browser)":
     if st.session_state.running:
-        with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
+        with st.spinner("⛑ Loading AEGIS detection model…"):
             detector = _load_detector(confidence_slider)
-        with cam_badge_ph:
+        with video_ph.container():
             val = auto_camera(key="auto_camera_key")
 
-        if not val:
-            if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
-                video_ph.image(st.session_state.last_annotated_frame, use_container_width=True)
-            else:
-                with video_ph.container():
-                    st.info("📹 **Connecting to laptop camera…** Please allow camera access in your browser pop-up.")
-                    st.markdown("""
-<div style="font-size:0.75rem;color:var(--text-muted);padding:8px 12px;background:var(--bg-card-2);border-radius:8px;border:1px solid var(--border-subtle);margin-top:6px;">
-    💡 <b>Browser Camera Tip:</b> Click the lock / camera icon in your browser address bar and select <b>Allow Camera</b>.<br/>
-    Alternatively, select <b>'Native Camera (Snapshot/Stream)'</b> or <b>'Local Webcam (OpenCV)'</b> in the sidebar.
-</div>
-""", unsafe_allow_html=True)
-        elif isinstance(val, str) and val.startswith("ERROR:"):
-            st.error(f"Webcam Error: {val}")
-            st.info("💡 Tip: Try switching to **'Native Camera (Snapshot/Stream)'** in the sidebar video source dropdown.")
-            st.session_state.running = False
-            st.rerun()
-        elif isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
+        if isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
             _, encoded = val.split(",", 1)
             raw_bytes = base64.b64decode(encoded)
             frame = None
@@ -771,7 +755,6 @@ if video_source == "Laptop Camera (Browser)":
                 except Exception:
                     frame = None
             if frame is None:
-                # Pillow fallback: pure Python, zero OpenCV / libGL dependency
                 try:
                     pil_img = Image.open(io.BytesIO(raw_bytes)).convert("RGB")
                     frame = np.array(pil_img)
@@ -780,22 +763,6 @@ if video_source == "Laptop Camera (Browser)":
 
             if frame is not None:
                 st.session_state.total_frames_scanned += 1
-                frame_count = st.session_state.total_frames_scanned
-
-                # ── Performance: resize on cloud to cap inference resolution ──
-                if _IS_CLOUD:
-                    if CV2_OK and cv2 is not None:
-                        frame = cv2.resize(frame, (640, 480))
-                    else:
-                        frame = np.array(Image.fromarray(frame).resize((640, 480)))
-
-                # ── Performance: skip every 2nd frame on cloud (show cached) ──
-                if _IS_CLOUD and frame_count % 2 == 0:
-                    if st.session_state.last_annotated_frame is not None:
-                        video_ph.image(st.session_state.last_annotated_frame,
-                                       use_container_width=True)
-                    st.rerun()
-
                 annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                         alert_classes=alert_classes)
                 st.session_state.last_annotated_frame = annotated
@@ -814,7 +781,6 @@ if video_source == "Laptop Camera (Browser)":
                         log_violation(tracker, w_id, d,
                                       st.session_state.total_frames_scanned, annotated)
 
-                # FPS
                 now = time.time()
                 if "prev_time" not in st.session_state:
                     st.session_state.prev_time = now
@@ -826,8 +792,39 @@ if video_source == "Laptop Camera (Browser)":
                     st.session_state.fps_history.pop(0)
                     st.session_state.time_history.pop(0)
 
-                refresh_ui(annotated, fps, st.session_state.total_frames_scanned,
-                           st.session_state.fps_history, st.session_state.time_history)
+                # Update KPIs, site status, feed, and audit table without wiping the live video stream
+                breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
+                render_kpis(breaches, critical, st.session_state.total_frames_scanned, fps, score, dur_str)
+                with status_ph:
+                    draw_site_status(breaches, critical)
+                with sys_status_ph:
+                    draw_system_status(DB_AVAILABLE, True)
+
+                # Update live violation feed
+                with feed_ph:
+                    if st.session_state.session_rows:
+                        recent = st.session_state.session_rows[-10:]
+                        for r in reversed(recent):
+                            draw_violation_feed_card(
+                                timestamp=r[0].split(" ")[1],
+                                violation_type=r[2],
+                                worker_id=r[1],
+                                confidence=float(r[3]),
+                                severity=severity_for(r[2]),
+                                status=r[9],
+                            )
+                    else:
+                        st.markdown('<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.78rem;">Scanning… No violations detected yet.</div>', unsafe_allow_html=True)
+
+                # Update audit log table
+                if st.session_state.session_rows:
+                    df = pd.DataFrame(st.session_state.session_rows, columns=CSV_HEADER)
+                    df["severity"] = df["violation_type"].apply(severity_for)
+                    logs_ph.dataframe(
+                        df[["timestamp", "worker_id", "violation_type", "severity", "confidence", "status"]],
+                        use_container_width=True,
+                    )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

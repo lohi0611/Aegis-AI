@@ -55,8 +55,8 @@ def render_landing_page():
         AI-Powered Industrial Safety Platform • OSHA & ISO-45001 Aligned
     </div>
     <div class="landing-title">
-        Real-Time PPE Compliance &amp;<br>
-        <span>Autonomous Hazard Intelligence</span>
+        Real-Time PPE Detection &amp; Compliance Monitoring System<br>
+        <span>for Construction Safety</span>
     </div>
     <div class="landing-subtitle">
         Eliminate worksite blindspots with high-speed computer vision. AEGIS detects missing

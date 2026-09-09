@@ -47,6 +47,8 @@ datasets/
 *.flv
 *.webm
 *.jfif
+!assets/sample_clip.mp4
+
 
 # ---------- YOLO / Training Runs ----------
 runs/

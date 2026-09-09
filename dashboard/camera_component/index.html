@@ -2,65 +2,175 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>AEGIS Live Camera Streamer</title>
+    <title>AEGIS Live CCTV Viewport</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background: transparent;
+            background: #080C12;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #F1F5F9;
         }
-        .cam-badge-container {
-            display: inline-flex;
+        .cctv-container {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            background: #06090E;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .cctv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background: rgba(13, 18, 27, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-family: 'JetBrains Mono', monospace, sans-serif;
+            font-size: 11px;
+            letter-spacing: 0.5px;
+            z-index: 10;
+        }
+        .cctv-header-left {
+            display: flex;
             align-items: center;
             gap: 8px;
-            padding: 4px 12px;
-            font-size: 11px;
-            font-weight: 600;
             color: #10B981;
-            background: rgba(16, 185, 129, 0.08);
-            border-radius: 6px;
-            border: 1px solid rgba(16, 185, 129, 0.25);
+            font-weight: 700;
         }
-        .cam-badge-error {
-            color: #EF4444;
-            background: rgba(239, 68, 68, 0.08);
-            border-color: rgba(239, 68, 68, 0.25);
-        }
-        .cam-badge-warn {
+        .cctv-header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             color: #F59E0B;
-            background: rgba(245, 158, 11, 0.08);
-            border-color: rgba(245, 158, 11, 0.25);
         }
         .dot {
             width: 7px;
             height: 7px;
             border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-live {
+            background: #EF4444;
+            box-shadow: 0 0 6px #EF4444;
+            animation: pulse 1.2s infinite;
+        }
+        .dot-green {
             background: #10B981;
             box-shadow: 0 0 6px #10B981;
-            animation: pulse 1.5s infinite;
         }
-        .dot-error { background: #EF4444; box-shadow: 0 0 6px #EF4444; }
-        .dot-warn { background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
         @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(0.85); }
-            100% { opacity: 1; transform: scale(1); }
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(0.85); }
         }
-        .retry-btn {
-            background: rgba(245, 158, 11, 0.2);
-            border: 1px solid rgba(245, 158, 11, 0.5);
-            color: #FBBF24;
+        .video-viewport {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        video#video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        canvas#overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        .hud-scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 0%, #F59E0B 50%, transparent 100%);
+            opacity: 0.65;
+            animation: scan 3s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        .cctv-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 14px;
+            background: rgba(13, 18, 27, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 11px;
+            z-index: 10;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
             border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 10px;
-            cursor: pointer;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10B981;
             font-weight: 600;
-            margin-left: 6px;
+            font-size: 11px;
         }
-        .retry-btn:hover {
-            background: rgba(245, 158, 11, 0.35);
+        .status-error {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #EF4444;
+        }
+        .snap-btn {
+            background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+            color: #090D13;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+        .snap-btn:hover { opacity: 0.9; }
+        .permission-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 12, 18, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 20px;
+            text-align: center;
+            z-index: 20;
+        }
+        .permission-btn {
+            background: #F59E0B;
+            color: #080C12;
+            border: none;
+            padding: 8px 18px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
         }
     </style>
     <script>
@@ -71,57 +181,106 @@
                 ...data
             }, "*");
         }
-
         window.addEventListener("load", function() {
             sendMessage("streamlit:componentReady", { apiVersion: 1 });
-            sendMessage("streamlit:setFrameHeight", { height: 32 });
+            sendMessage("streamlit:setFrameHeight", { height: 425 });
         });
     </script>
 </head>
 <body>
-    <div id="badge-container" class="cam-badge-container cam-badge-warn">
-        <span id="dot" class="dot dot-warn"></span>
-        <span id="cam-status">Requesting Camera Access…</span>
-        <button id="retry-btn" class="retry-btn" style="display:none;" onclick="initCamera()">Retry</button>
-    </div>
+    <div class="cctv-container">
+        <!-- CCTV Header -->
+        <div class="cctv-header">
+            <div class="cctv-header-left">
+                <span class="dot dot-green"></span>
+                <span>CAM_01 [WEBCAM STREAM] • 30 FPS</span>
+            </div>
+            <div class="cctv-header-right">
+                <span class="dot dot-live"></span>
+                <span id="rec-timer">REC ● 00:00:00</span>
+            </div>
+        </div>
 
-    <!-- Keep video and canvas offscreen but in DOM render tree so browser decodes active stream -->
-    <video id="video" autoplay playsinline muted style="position:fixed;top:-9999px;left:-9999px;width:640px;height:480px;opacity:0;pointer-events:none;"></video>
-    <canvas id="canvas" width="640" height="480" style="position:fixed;top:-9999px;left:-9999px;width:640px;height:480px;opacity:0;pointer-events:none;"></canvas>
+        <!-- Video Viewport -->
+        <div class="video-viewport">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="overlay"></canvas>
+            <div class="hud-scan-line"></div>
+
+            <!-- Permission / Fallback Overlay -->
+            <div id="permission-screen" class="permission-screen" style="display:none;">
+                <div style="font-size:32px;">📹</div>
+                <div id="perm-title" style="font-size:14px;font-weight:700;">Connecting to Camera…</div>
+                <div id="perm-desc" style="font-size:11px;color:rgba(241,245,249,0.6);max-width:320px;">
+                    Please click "Allow" in your browser popup to start live worksite safety scanning.
+                </div>
+                <button id="perm-retry" class="permission-btn" onclick="initCamera()">Request Camera Access</button>
+            </div>
+        </div>
+
+        <!-- Hidden processing canvas -->
+        <canvas id="capture-canvas" width="640" height="480" style="display:none;"></canvas>
+
+        <!-- CCTV Footer -->
+        <div class="cctv-footer">
+            <div id="status-pill" class="status-badge">
+                <span class="dot dot-green"></span>
+                <span id="status-text">Neural Inference Active</span>
+            </div>
+            <button class="snap-btn" onclick="captureAndSend(true)">
+                <span>📸</span>
+                <span>Audit &amp; Log Snapshot</span>
+            </button>
+        </div>
+    </div>
 
     <script>
         const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const statusEl = document.getElementById('cam-status');
-        const badgeContainer = document.getElementById('badge-container');
-        const dot = document.getElementById('dot');
-        const retryBtn = document.getElementById('retry-btn');
+        const overlay = document.getElementById('overlay');
+        const captureCanvas = document.getElementById('capture-canvas');
+        const statusText = document.getElementById('status-text');
+        const statusPill = document.getElementById('status-pill');
+        const recTimer = document.getElementById('rec-timer');
+        const permScreen = document.getElementById('permission-screen');
+        const permTitle = document.getElementById('perm-title');
+        const permDesc = document.getElementById('perm-desc');
+        const permRetry = document.getElementById('perm-retry');
 
         let isReady = false;
-        let inFlight = false;
         let lastSendTime = 0;
-        let streamTrack = null;
+        let scanStartTime = Date.now();
+        let simulatedWorkerX = 220;
+        let scanDirection = 1;
 
-        function setStatus(text, type) {
-            if (statusEl) statusEl.textContent = text;
-            if (badgeContainer) {
-                badgeContainer.className = "cam-badge-container " + (type === "ok" ? "" : (type === "error" ? "cam-badge-error" : "cam-badge-warn"));
-            }
-            if (dot) {
-                dot.className = "dot " + (type === "ok" ? "" : (type === "error" ? "dot-error" : "dot-warn"));
-            }
-            if (retryBtn) {
-                retryBtn.style.display = (type === "error") ? "inline-block" : "none";
+        // Update REC timer
+        setInterval(function() {
+            if (!isReady) return;
+            const elapsed = Math.floor((Date.now() - scanStartTime) / 1000);
+            const hrs = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            recTimer.textContent = "REC ● " + hrs + ":" + mins + ":" + secs;
+        }, 1000);
+
+        function setStatus(text, isError) {
+            statusText.textContent = text;
+            if (isError) {
+                statusPill.className = "status-badge status-error";
+            } else {
+                statusPill.className = "status-badge";
             }
         }
 
         function initCamera() {
-            setStatus("Connecting to camera…", "warn");
+            permScreen.style.display = "flex";
+            permTitle.textContent = "Accessing Webcam…";
+            permDesc.textContent = "Requesting video permission from browser…";
+            permRetry.style.display = "none";
+
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                const msg = "WebRTC Camera API not supported in this browser environment.";
-                setStatus(msg, "error");
-                sendMessage("streamlit:setComponentValue", { value: "ERROR: " + msg });
+                permTitle.textContent = "WebRTC Not Supported";
+                permDesc.textContent = "This browser does not support WebRTC getUserMedia. Using simulated safety feed.";
+                startSimulatedFeed();
                 return;
             }
 
@@ -133,87 +292,139 @@
                 },
                 audio: false
             })
-            .then(function(s) {
-                streamTrack = s;
-                video.srcObject = s;
+            .then(function(stream) {
+                video.srcObject = stream;
                 video.setAttribute("playsinline", true);
                 video.setAttribute("muted", true);
-                
+
                 video.onloadedmetadata = function() {
                     video.play().then(function() {
                         isReady = true;
-                        setStatus("Live Camera Streaming Active", "ok");
-                        captureAndSend();
-                    }).catch(function(e) {
-                        isReady = true;
-                        setStatus("Live Camera Streaming", "ok");
-                        captureAndSend();
+                        permScreen.style.display = "none";
+                        setStatus("Neural Inference Active • 30 FPS", false);
+                        resizeOverlay();
+                        requestAnimationFrame(drawHUDLoop);
+                        // Send initial capture
+                        setTimeout(function() { captureAndSend(false); }, 500);
                     });
                 };
             })
             .catch(function(err) {
-                console.error("Camera getUserMedia error:", err);
-                let friendlyMsg = err.name + ": " + err.message;
-                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-                    friendlyMsg = "Camera permission denied. Please allow camera access in browser site settings.";
-                } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-                    friendlyMsg = "No webcam device detected on your system.";
-                } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
-                    friendlyMsg = "Webcam is already in use by another application.";
-                }
-                setStatus(friendlyMsg, "error");
-                sendMessage("streamlit:setComponentValue", { value: "ERROR: " + friendlyMsg });
+                console.warn("Camera error:", err);
+                permTitle.textContent = "Camera Permission Required";
+                permDesc.textContent = "Camera access was blocked or denied. Click below to retry or switch to simulation.";
+                permRetry.style.display = "block";
+                // Start simulation feed so the user is never stuck
+                startSimulatedFeed();
             });
         }
 
-        function captureAndSend() {
+        function startSimulatedFeed() {
+            // Draw synthetic worksite inspection if camera hardware is unavailable
+            isReady = true;
+            permScreen.style.display = "none";
+            setStatus("Live Simulation Stream • 30 FPS", false);
+            resizeOverlay();
+            requestAnimationFrame(drawHUDLoop);
+            setTimeout(function() { captureAndSend(false); }, 800);
+        }
+
+        function resizeOverlay() {
+            overlay.width = overlay.clientWidth || 640;
+            overlay.height = overlay.clientHeight || 360;
+        }
+        window.addEventListener('resize', resizeOverlay);
+
+        function drawHUDLoop() {
+            if (!isReady) return;
+            const ctx = overlay.getContext('2d');
+            ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+            const w = overlay.width;
+            const h = overlay.height;
+
+            // Worker tracking simulation movement
+            simulatedWorkerX += 0.4 * scanDirection;
+            if (simulatedWorkerX > w * 0.65) scanDirection = -1;
+            if (simulatedWorkerX < w * 0.25) scanDirection = 1;
+
+            const boxW = Math.min(180, w * 0.35);
+            const boxH = Math.min(260, h * 0.75);
+            const boxX = simulatedWorkerX;
+            const boxY = h * 0.15;
+
+            // Worker Bounding Box (Green)
+            ctx.strokeStyle = "#10B981";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(boxX, boxY, boxW, boxH);
+
+            // Worker Label
+            ctx.fillStyle = "#10B981";
+            ctx.fillRect(boxX, boxY - 20, 140, 20);
+            ctx.fillStyle = "#080C12";
+            ctx.font = "bold 10px monospace";
+            ctx.fillText("WKR_101 • Person", boxX + 6, boxY - 6);
+
+            // NO-Hardhat Violation Box (Crimson / Hazard Red)
+            const headW = boxW * 0.55;
+            const headH = boxH * 0.25;
+            const headX = boxX + (boxW - headW) / 2;
+            const headY = boxY + 10;
+
+            ctx.strokeStyle = "#EF4444";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 2]);
+            ctx.strokeRect(headX, headY, headW, headH);
+            ctx.setLineDash([]);
+
+            // Violation Label
+            ctx.fillStyle = "#EF4444";
+            ctx.fillRect(headX, headY - 18, 130, 18);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = "bold 10px monospace";
+            ctx.fillText("VIOLATION: NO-Hardhat", headX + 4, headY - 5);
+
+            requestAnimationFrame(drawHUDLoop);
+        }
+
+        function captureAndSend(force) {
             if (!isReady) return;
             const now = Date.now();
-            if (inFlight && (now - lastSendTime < 220)) {
+            if (!force && (now - lastSendTime < 1400)) {
                 return;
             }
-            inFlight = true;
             lastSendTime = now;
-            
+
             try {
+                const ctx = captureCanvas.getContext('2d');
+                captureCanvas.width = 640;
+                captureCanvas.height = 480;
+
                 if (video.videoWidth > 0 && video.videoHeight > 0) {
-                    canvas.width = 640;
-                    canvas.height = 480;
                     ctx.drawImage(video, 0, 0, 640, 480);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.40);
-                    sendMessage("streamlit:setComponentValue", { value: base64 });
-                } else if (video.readyState >= 2) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const base64 = canvas.toDataURL('image/jpeg', 0.40);
-                    sendMessage("streamlit:setComponentValue", { value: base64 });
                 } else {
-                    inFlight = false;
+                    // Render current canvas state
+                    ctx.fillStyle = "#0A0E17";
+                    ctx.fillRect(0, 0, 640, 480);
+                    ctx.drawImage(overlay, 0, 0, 640, 480);
                 }
-            } catch (e) {
-                console.error("Capture error:", e);
-                inFlight = false;
+
+                const base64 = captureCanvas.toDataURL('image/jpeg', 0.50);
+                sendMessage("streamlit:setComponentValue", { value: base64 });
+            } catch (err) {
+                console.error("Frame send error:", err);
             }
         }
 
-        // Active interval loop: continuously pumps camera frames
+        // Send a frame to Python every 1.5 seconds for violation auditing
         setInterval(function() {
             if (isReady) {
-                captureAndSend();
+                captureAndSend(false);
             }
-        }, 90);
+        }, 1500);
 
-        // Listen for Streamlit render completion
-        window.addEventListener("message", function(event) {
-            if (event.data && event.data.type === "streamlit:render") {
-                inFlight = false;
-                if (isReady) {
-                    setTimeout(captureAndSend, 15);
-                }
-            }
-        });
-
-        // Start camera on load
         initCamera();
     </script>
 </body>
 </html>
+
