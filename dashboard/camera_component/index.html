@@ -327,7 +327,16 @@
             resizeOverlay();
             requestAnimationFrame(drawHUDLoop);
             setTimeout(function() { captureAndSend(false); }, 800);
-        }
+        let currentDetections = [];
+
+        // Listen for Streamlit render completion and incoming detection bounding boxes
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "streamlit:render") {
+                if (event.data.args && event.data.args.detections && Array.isArray(event.data.args.detections)) {
+                    currentDetections = event.data.args.detections;
+                }
+            }
+        });
 
         function resizeOverlay() {
             overlay.width = overlay.clientWidth || 640;
@@ -343,46 +352,74 @@
             const w = overlay.width;
             const h = overlay.height;
 
-            // Worker tracking simulation movement
-            simulatedWorkerX += 0.4 * scanDirection;
-            if (simulatedWorkerX > w * 0.65) scanDirection = -1;
-            if (simulatedWorkerX < w * 0.25) scanDirection = 1;
+            if (currentDetections && currentDetections.length > 0) {
+                const scaleX = w / 640;
+                const scaleY = h / 480;
 
-            const boxW = Math.min(180, w * 0.35);
-            const boxH = Math.min(260, h * 0.75);
-            const boxX = simulatedWorkerX;
-            const boxY = h * 0.15;
+                currentDetections.forEach(function(d) {
+                    if (!d.bbox || d.bbox.length < 4) return;
+                    const x = d.bbox[0] * scaleX;
+                    const y = d.bbox[1] * scaleY;
+                    const bw = Math.max(10, (d.bbox[2] - d.bbox[0]) * scaleX);
+                    const bh = Math.max(10, (d.bbox[3] - d.bbox[1]) * scaleY);
+                    const cls = d.class_name || "Object";
+                    const conf = d.confidence ? Math.round(d.confidence * 100) : 90;
+                    const isViolation = cls.startsWith("NO-") || cls.includes("NO_");
 
-            // Worker Bounding Box (Green)
-            ctx.strokeStyle = "#10B981";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(boxX, boxY, boxW, boxH);
+                    ctx.lineWidth = 2.5;
+                    if (isViolation) {
+                        ctx.strokeStyle = "#EF4444";
+                        ctx.fillStyle = "#EF4444";
+                        ctx.setLineDash([6, 3]);
+                    } else if (cls === "Person") {
+                        ctx.strokeStyle = "#10B981";
+                        ctx.fillStyle = "#10B981";
+                        ctx.setLineDash([]);
+                    } else {
+                        ctx.strokeStyle = "#06B6D4";
+                        ctx.fillStyle = "#06B6D4";
+                        ctx.setLineDash([]);
+                    }
 
-            // Worker Label
-            ctx.fillStyle = "#10B981";
-            ctx.fillRect(boxX, boxY - 20, 140, 20);
-            ctx.fillStyle = "#080C12";
-            ctx.font = "bold 10px monospace";
-            ctx.fillText("WKR_101 • Person", boxX + 6, boxY - 6);
+                    // Stroke box
+                    ctx.strokeRect(x, y, bw, bh);
+                    ctx.setLineDash([]);
 
-            // NO-Hardhat Violation Box (Crimson / Hazard Red)
-            const headW = boxW * 0.55;
-            const headH = boxH * 0.25;
-            const headX = boxX + (boxW - headW) / 2;
-            const headY = boxY + 10;
+                    // Label tag
+                    const tagText = (isViolation ? "🚨 " : "✓ ") + cls + " (" + conf + "%)";
+                    ctx.font = "bold 11px 'JetBrains Mono', monospace, sans-serif";
+                    const tagWidth = ctx.measureText(tagText).width + 12;
+                    const tagY = Math.max(0, y - 20);
+                    ctx.fillRect(x, tagY, tagWidth, 20);
 
-            ctx.strokeStyle = "#EF4444";
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 2]);
-            ctx.strokeRect(headX, headY, headW, headH);
-            ctx.setLineDash([]);
+                    ctx.fillStyle = "#FFFFFF";
+                    ctx.fillText(tagText, x + 6, tagY + 14);
+                });
+            } else {
+                // Active reticle when searching for personnel
+                const rx = w * 0.25;
+                const ry = h * 0.18;
+                const rw = w * 0.5;
+                const rh = h * 0.64;
+                const corner = 22;
 
-            // Violation Label
-            ctx.fillStyle = "#EF4444";
-            ctx.fillRect(headX, headY - 18, 130, 18);
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = "bold 10px monospace";
-            ctx.fillText("VIOLATION: NO-Hardhat", headX + 4, headY - 5);
+                ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+
+                // Top-left
+                ctx.beginPath(); ctx.moveTo(rx, ry + corner); ctx.lineTo(rx, ry); ctx.lineTo(rx + corner, ry); ctx.stroke();
+                // Top-right
+                ctx.beginPath(); ctx.moveTo(rx + rw - corner, ry); ctx.lineTo(rx + rw, ry); ctx.lineTo(rx + rw, ry + corner); ctx.stroke();
+                // Bottom-left
+                ctx.beginPath(); ctx.moveTo(rx, ry + rh - corner); ctx.lineTo(rx, ry + rh); ctx.lineTo(rx + corner, ry + rh); ctx.stroke();
+                // Bottom-right
+                ctx.beginPath(); ctx.moveTo(rx + rw - corner, ry + rh); ctx.lineTo(rx + rw, ry + rh); ctx.lineTo(rx + rw, ry + rh - corner); ctx.stroke();
+
+                ctx.fillStyle = "rgba(245, 158, 11, 0.85)";
+                ctx.font = "bold 10px 'JetBrains Mono', monospace, sans-serif";
+                ctx.fillText("[ AI NEURAL VISION • SCANNING WORKSPACE ]", rx + 14, ry + 18);
+            }
 
             requestAnimationFrame(drawHUDLoop);
         }
@@ -390,7 +427,7 @@
         function captureAndSend(force) {
             if (!isReady) return;
             const now = Date.now();
-            if (!force && (now - lastSendTime < 1400)) {
+            if (!force && (now - lastSendTime < 1000)) {
                 return;
             }
             lastSendTime = now;
@@ -403,7 +440,6 @@
                 if (video.videoWidth > 0 && video.videoHeight > 0) {
                     ctx.drawImage(video, 0, 0, 640, 480);
                 } else {
-                    // Render current canvas state
                     ctx.fillStyle = "#0A0E17";
                     ctx.fillRect(0, 0, 640, 480);
                     ctx.drawImage(overlay, 0, 0, 640, 480);
@@ -416,12 +452,12 @@
             }
         }
 
-        // Send a frame to Python every 1.5 seconds for violation auditing
+        // Send a frame to Python every 1000ms for continuous real-time neural detection
         setInterval(function() {
             if (isReady) {
                 captureAndSend(false);
             }
-        }, 1500);
+        }, 1000);
 
         initCamera();
     </script>

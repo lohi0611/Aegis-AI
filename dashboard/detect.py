@@ -143,6 +143,25 @@ class PPEDetector:
         if alert_classes is None or "NO-Hardhat" in alert_classes:
             detections.append(violation_det)
 
-        annotated = np.array(frame, copy=True) if hasattr(frame, "copy") else frame
+        from PIL import Image, ImageDraw
+
+        if isinstance(frame, np.ndarray):
+            annotated_img = Image.fromarray(frame).convert("RGB")
+        elif hasattr(frame, "copy"):
+            annotated_img = frame.copy()
+        else:
+            annotated_img = Image.new("RGB", (w, h), color="#080C12")
+
+        draw = ImageDraw.Draw(annotated_img)
+
+        # Draw Person Bounding Box (Green)
+        draw.rectangle(w_box, outline="#10B981", width=3)
+        draw.text((w_box[0] + 6, max(2, w_box[1] - 16)), "WKR_101: Person (94%)", fill="#10B981")
+
+        # Draw NO-Hardhat Violation Box (Red)
+        draw.rectangle(hh_box, outline="#EF4444", width=3)
+        draw.text((hh_box[0] + 6, max(2, hh_box[1] - 16)), "VIOLATION: NO-Hardhat (89%)", fill="#EF4444")
+
+        annotated = np.array(annotated_img)
         return annotated, detections
 

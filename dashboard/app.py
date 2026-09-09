@@ -742,7 +742,10 @@ if video_source == "Laptop Camera (Browser)":
         with st.spinner("⛑ Loading AEGIS detection model…"):
             detector = _load_detector(confidence_slider)
         with video_ph.container():
-            val = auto_camera(key="auto_camera_key")
+            val = auto_camera(
+                detections=st.session_state.get("last_detections", []),
+                key="auto_camera_key"
+            )
 
         if isinstance(val, str) and val.startswith("data:image/jpeg;base64,"):
             _, encoded = val.split(",", 1)
@@ -766,6 +769,7 @@ if video_source == "Laptop Camera (Browser)":
                 annotated, detections = detector.detect(frame, line_width=line_thickness,
                                                         alert_classes=alert_classes)
                 st.session_state.last_annotated_frame = annotated
+                st.session_state.last_detections      = detections
 
                 rects       = [d["bbox"] for d in detections]
                 class_names = [d["class_name"] for d in detections]
@@ -792,7 +796,24 @@ if video_source == "Laptop Camera (Browser)":
                     st.session_state.fps_history.pop(0)
                     st.session_state.time_history.pop(0)
 
-                # Update KPIs, site status, feed, and audit table without wiping the live video stream
+                # Render real-time AI detection image with bounding boxes
+                display_frame = annotated
+                if isinstance(annotated, np.ndarray) and len(annotated.shape) == 3 and annotated.shape[2] == 3:
+                    if CV2_OK and cv2 is not None:
+                        try:
+                            display_frame = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+                        except Exception:
+                            display_frame = annotated
+                    else:
+                        display_frame = annotated
+
+                cam_badge_ph.image(
+                    display_frame,
+                    caption="🎯 Real-Time AI Detection Overlay — Live Worksite PPE Scan",
+                    use_container_width=True
+                )
+
+                # Update KPIs, site status, feed, and audit table
                 breaches, critical, frames, avg_fps, score, dur_str = compute_kpis()
                 render_kpis(breaches, critical, st.session_state.total_frames_scanned, fps, score, dur_str)
                 with status_ph:
