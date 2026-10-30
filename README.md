@@ -24,7 +24,7 @@
 
 > [!TIP]
 > ### 🚀 Live Interactive Cloud Deployment
-> **Try AEGIS directly in your browser:** **[https://aegis-ai.streamlit.app](https://aegis-ai.streamlit.app/)**
+> **Try AEGIS directly in your browser:** **[https://aegis-ai.streamlit.app]([https://aegis-ai.streamlit.app/](https://aegis-ai-bhflqw5bzy8xqxrnuunpkb.streamlit.app/incidentExplorer))**
 > 
 > * **⚡ One-Click Demo Mode:** Click the pre-configured demo button on the login screen to explore with full administrative privileges.
 > * **Default Credentials:** `admin@aegis.ai` &nbsp;|&nbsp; Password: `Admin@1234` &nbsp;|&nbsp; Role: *Site EHS Director*
