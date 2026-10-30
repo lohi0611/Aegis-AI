@@ -1,131 +1,170 @@
-<div align="center">
-
 # 🛡️ AEGIS — Adaptive Edge Guardian Intelligence for Safety
 
 ### **Enterprise AI Safety Intelligence & Real-Time Computer Vision Platform**
+
 *Autonomous PPE Compliance Monitoring, Hazard Mitigation, and Safety Analytics for High-Risk Environments*
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://aegis-ai.streamlit.app/)
-[![CI Tests](https://github.com/lohi0611/Aegis-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/lohi0611/Aegis-AI/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/downloads/)
-[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF.svg)](https://github.com/ultralytics/ultralytics)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit_1.55-FF4B4B.svg?logo=streamlit&logoColor=white)](https://aegis-ai.streamlit.app/)
-[![Test Coverage](https://img.shields.io/badge/Test_Coverage-66%25-brightgreen.svg)](#-testing--quality-assurance)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+<p align="center">
+  <a href="https://aegis-ai-bhflqw5bzy8xqxrnuunpkb.streamlit.app/">
+    <img src="https://static.streamlit.io/badges/streamlit_badge_black_white.svg" alt="Streamlit App">
+  </a>
+  <a href="https://github.com/lohi0611/Aegis-AI/actions/workflows/ci.yml">
+    <img src="https://github.com/lohi0611/Aegis-AI/actions/workflows/ci.yml/badge.svg" alt="CI Tests">
+  </a>
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python">
+  <a href="https://github.com/ultralytics/ultralytics">
+    <img src="https://img.shields.io/badge/YOLOv8-Ultralytics-00FFFF" alt="YOLOv8">
+  </a>
+  <a href="https://pytorch.org/">
+    <img src="https://img.shields.io/badge/PyTorch-2.0%2B-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch">
+  </a>
+  <a href="https://streamlit.io/">
+    <img src="https://img.shields.io/badge/Dashboard-Streamlit-FF4B4B?logo=streamlit&logoColor=white" alt="Streamlit">
+  </a>
+  <img src="https://img.shields.io/badge/Test_Coverage-66%25-brightgreen" alt="Test Coverage">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License">
+  </a>
+</p>
 
-<br/>
-
-**[🌐 Launch Live Cloud Demo](https://aegis-ai.streamlit.app/)** • **[📖 Architecture Documentation](#-system-architecture)** • **[📊 Empirical Results](#-quantitative-empirical-results)** • **[🚀 Quick Start](#-quick-start--installation)**
+<p align="center">
+  <strong>
+    <a href="https://aegis-ai-bhflqw5bzy8xqxrnuunpkb.streamlit.app/">🌐 Launch Live Cloud Demo</a>
+    •
+    <a href="#system-architecture">📖 Architecture Documentation</a>
+    •
+    <a href="#quantitative-empirical-results">📊 Empirical Results</a>
+    •
+    <a href="#quick-start--installation">🚀 Quick Start</a>
+  </strong>
+</p>
 
 ---
 
-</div>
-
 > [!TIP]
 > ### 🚀 Live Interactive Cloud Deployment
-> **Try AEGIS directly in your browser:** **[https://aegis-ai.streamlit.app]([https://aegis-ai.streamlit.app/](https://aegis-ai-bhflqw5bzy8xqxrnuunpkb.streamlit.app/incidentExplorer))**
-> 
-> * **⚡ One-Click Demo Mode:** Click the pre-configured demo button on the login screen to explore with full administrative privileges.
-> * **Default Credentials:** `admin@aegis.ai` &nbsp;|&nbsp; Password: `Admin@1234` &nbsp;|&nbsp; Role: *Site EHS Director*
+>
+> Try AEGIS directly in your browser:
+> **[Launch AEGIS Live Demo](https://aegis-ai-bhflqw5bzy8xqxrnuunpkb.streamlit.app/)**
+>
+> - **One-Click Demo Mode:** Use the pre-configured demo option on the login screen to explore the platform.
+> - **Demo Credentials:** `admin@aegis.ai`
+> - **Password:** `Admin@1234`
+> - **Role:** Site EHS Director
 
 ---
 
 ## 📌 Executive Summary
 
-**AEGIS** is an enterprise-ready, edge-deployable computer vision platform engineered for automated Personal Protective Equipment (PPE) compliance monitoring and hazard detection on construction sites and heavy industrial facilities. 
+**AEGIS** is an edge-deployable computer vision platform designed for automated Personal Protective Equipment (PPE) compliance monitoring and hazard detection in construction sites and heavy industrial environments.
 
-Designed for IEEE-grade empirical validation and field deployment, AEGIS bridges deep neural object detection (**YOLOv8**) with a multi-stage **stateful compliance engine** incorporating:
-1. **Spatial Anatomical Association:** Multi-metric containment, IoU, and centroid proximity assignment connecting safety gear (hard hats, high-vis vests, face masks) to individual tracked workers.
-2. **Temporal Hysteresis Filtering:** Sliding-window $N$-frame confirmation buffer to suppress transient occlusions and eliminate false-positive alerts.
-3. **Enterprise RBAC & Persistence:** Cryptographic user authentication (PBKDF2-HMAC-SHA256) and SQLAlchemy ORM audit logging for regulatory compliance (OSHA / ISO 45001).
+The platform combines deep neural object detection using **YOLOv8** with a multi-stage stateful compliance engine incorporating:
+
+1. **Spatial Anatomical Association:** Uses bounding-box containment, Intersection over Union (IoU), and centroid proximity to associate safety equipment such as hard hats, safety vests, and face masks with individual workers.
+
+2. **Temporal Hysteresis Filtering:** Implements an N-frame sliding-window confirmation mechanism to reduce transient detection errors caused by occlusions and eliminate unnecessary alerts.
+
+3. **Enterprise Authentication and Persistence:** Implements password hashing using PBKDF2-HMAC-SHA256 and SQLAlchemy-based database logging to maintain user authentication records and safety incident information.
 
 ---
 
 ## ✨ Key Capabilities & Platform Highlights
 
 | Feature | Description |
-| :--- | :--- |
-| 👁️ **Multi-Modal Video Ingestion** | Real-time browser webcams via WebRTC, industrial RTSP/IP camera feeds, and video file upload analysis. |
-| 🧠 **Fine-Tuned YOLOv8 Detector** | 10 target classes including gear presence and explicit absence indicators (*NO-Hardhat*, *NO-Safety Vest*, *NO-Mask*). |
-| 📐 **Spatial Association Engine** | Anatomical bounding-box heuristics assigning gear to worker torsos and heads with custom containment thresholds. |
-| ⏱️ **Temporal Verification Hysteresis** | Multi-frame persistence buffer preventing false alarms from brief motion blur or line-of-sight obstruction. |
-| 🔐 **Enterprise Auth & Security** | Split-screen SaaS authentication with PBKDF2 salted password hashing, live password strength meter, and demo sandbox. |
-| 📊 **Safety Analytics & Forensics** | Interactive Plotly dashboards, compliance scorecards, incident timeline explorer, and automated snapshot exports. |
-| ⚡ **Near-Real-Time Edge Throughput** | Highly optimized CPU pipeline achieving **12.48 FPS at 320×320** and sub-18ms association latency on standard compute. |
+|---|---|
+| 👁️ **Multi-Modal Video Ingestion** | Supports browser webcams through WebRTC, industrial RTSP/IP camera feeds, and uploaded video files. |
+| 🧠 **Fine-Tuned YOLOv8 Detector** | Detects 10 target classes, including PPE equipment and explicit absence indicators such as NO-Hardhat, NO-Safety Vest, and NO-Mask. |
+| 📐 **Spatial Association Engine** | Associates detected PPE with individual workers using bounding-box containment, IoU, and anatomical positioning. |
+| ⏱️ **Temporal Verification Hysteresis** | Uses multi-frame confirmation to reduce false alerts caused by temporary occlusion and motion blur. |
+| 🔐 **Enterprise Authentication & Security** | Provides user authentication, PBKDF2 password hashing, password strength validation, and demo access. |
+| 📊 **Safety Analytics & Forensics** | Includes interactive dashboards, compliance scorecards, incident timelines, and snapshot exports. |
+| ⚡ **CPU-Based Processing** | Achieves 12.48 FPS at 320 × 320 resolution with an average association latency below 18 ms. |
 
 ---
 
 ## System Architecture
 
-```
+```text
 AEGIS
-├── Video Sources (Camera / Video / RTSP Stream)
-│   └── VideoProcessor (OpenCV + Frame Buffer)
+│
+├── Video Sources
+│   ├── Camera
+│   ├── Video Upload
+│   └── RTSP Stream
+│       └── VideoProcessor (OpenCV + Frame Buffer)
 │
 ├── Detector Layer
-│   └── YOLOv8 (custom PPE weights)
-│       Classes: Person, Hardhat, NO-Hardhat,
-│                Safety Vest, NO-Safety Vest, Mask, NO-Mask,
-│                Safety Cone, Machinery, Vehicle
+│   └── YOLOv8 (Custom PPE Weights)
+│       ├── Person
+│       ├── Hardhat
+│       ├── NO-Hardhat
+│       ├── Safety Vest
+│       ├── NO-Safety Vest
+│       ├── Mask
+│       ├── NO-Mask
+│       ├── Safety Cone
+│       ├── Machinery
+│       └── Vehicle
 │
 ├── src/ — Core Intelligence Layer
-│   ├── association/        # Spatial PPE-to-Worker assignment
-│   │   └── spatial.py      # Containment + IoU + Anatomical scoring
-│   ├── compliance/         # Safety decision pipeline
-│   │   ├── rules.py        # PPE requirement rules
-│   │   ├── temporal.py     # N-frame confirmation hysteresis
-│   │   └── engine.py       # Unified orchestration
-│   ├── tracking/           # Centroid/ByteTrack worker track assignment
-│   ├── alerts/             # Cooldown-based alert dispatch
-│   ├── config/             # YAML + env-var config loader
-│   ├── database/           # SQLAlchemy ORM (SQLite / PostgreSQL)
+│   ├── association/
+│   │   └── spatial.py
+│   ├── compliance/
+│   │   ├── rules.py
+│   │   ├── temporal.py
+│   │   └── engine.py
+│   ├── tracking/
+│   ├── alerts/
+│   ├── config/
+│   ├── database/
 │   │   ├── models.py
 │   │   └── repository.py
-│   ├── video/              # Frame I/O and preprocessing
-│   └── utils/              # Logging, file I/O, telemetry helpers
+│   ├── video/
+│   └── utils/
 │
-├── evaluation/             # Research Evaluation Suite
-│   ├── evaluate_model.py           # YOLO val() detection metrics
-│   ├── benchmark_realtime.py       # Latency / FPS / P95 / P99 benchmarks
-│   ├── evaluate_compliance.py      # Frame-level & worker-level compliance
-│   ├── error_analysis.py           # Scale sensitivity & confusion matrices
-│   ├── cross_validation.py         # K-fold dataset cross validation
-│   ├── ablation_study.py           # Component ablation (IoU, N-frame)
-│   ├── compare_models.py           # Model variant comparison
-│   └── run_all_evaluations.py      # Master evaluation runner
+├── evaluation/
+│   ├── evaluate_model.py
+│   ├── benchmark_realtime.py
+│   ├── evaluate_compliance.py
+│   ├── error_analysis.py
+│   ├── cross_validation.py
+│   ├── ablation_study.py
+│   ├── compare_models.py
+│   └── run_all_evaluations.py
 │
-├── dashboard/              # Enterprise Streamlit SaaS Application
-│   ├── app.py              # Multi-source vision engine & router
-│   ├── db.py               # Data layer bridge & user auth wrapper
-│   ├── ui_utils.py         # Design tokens, CSS system, and executive navbars
+├── dashboard/
+│   ├── app.py
+│   ├── db.py
+│   ├── ui_utils.py
 │   ├── components/
-│   │   ├── landing.py      # SaaS landing page with live interactive preview
-│   │   └── auth.py         # Split-screen PBKDF2 authentication & demo mode
+│   │   ├── landing.py
+│   │   └── auth.py
 │   └── pages/
-│       ├── 1_complianceStats.py    # Analytics & OSHA compliance telemetry
-│       └── 2_incidentExplorer.py   # Incident forensics & audit vault
+│       ├── 1_complianceStats.py
+│       └── 2_incidentExplorer.py
 │
-└── tests/                  # Automated Pytest Suite (72 tests, 66% coverage)
-    ├── test_auth.py        # PBKDF2 cryptography & User model mapping
-    ├── test_tracking.py    # Centroid distance association & track lifecycle
-    ├── test_utils.py       # Performance timers, latency & logging
-    ├── test_metrics.py     # Mathematical verification of all metrics
-    ├── test_association.py # Spatial geometry, IoU, and anatomical scoring
-    ├── test_compliance.py  # Rule engine & temporal confirmation hysteresis
-    ├── test_alerts.py      # Cooldown and severity routing
-    ├── test_config.py      # Dynamic configuration loading
-    └── test_database.py    # SQLAlchemy ORM and incident logging persistence
+└── tests/
+    ├── test_auth.py
+    ├── test_tracking.py
+    ├── test_utils.py
+    ├── test_metrics.py
+    ├── test_association.py
+    ├── test_compliance.py
+    ├── test_alerts.py
+    ├── test_config.py
+    └── test_database.py
 ```
 
 ---
 
 ## Quantitative Empirical Results
 
-### 1. Object Detection Performance (Test Split, N=82 images, 760 instances)
+### 1. Object Detection Performance
+
+**Test Split: 82 Images | 760 Instances**
 
 | Class Name | Precision | Recall | F1-Score | mAP@50 | mAP@50-95 |
-|---|---|---|---|---|---|
+|---|---:|---:|---:|---:|---:|
 | **Hardhat** | 0.9936 | 0.8727 | 0.9293 | 0.9425 | 0.6463 |
 | **Mask** | 0.9619 | 0.7500 | 0.8428 | 0.8637 | 0.5580 |
 | **NO-Hardhat** | 0.8657 | 0.6291 | 0.7287 | 0.7063 | 0.4019 |
@@ -136,26 +175,32 @@ AEGIS
 | **Safety Vest** | 0.9239 | 0.7958 | 0.8551 | 0.8878 | 0.6203 |
 | **Machinery** | 0.9196 | 0.8409 | 0.8785 | 0.8999 | 0.6903 |
 | **Vehicle** | 0.9349 | 0.6341 | 0.7557 | 0.8357 | 0.5301 |
-| **Overall (All Classes)** | **0.9197** | **0.7243** | **0.8104** | **0.8386** | **0.5273** |
+| **Overall** | **0.9197** | **0.7243** | **0.8104** | **0.8386** | **0.5273** |
 
 ---
 
 ### 2. Compliance Decision Performance
 
-#### Frame-Level PPE Violation Decision (N=82 test images)
+#### Frame-Level PPE Violation Decision
+
+**Test Images: N = 82**
+
 | Metric | Empirical Value |
-|---|---|
-| **Decision Accuracy** | **93.90%** (77 / 82 frames) |
-| **Violation Precision** | **97.78%** (44 / 45 flags) |
-| **Violation Recall / Sensitivity** | **91.67%** (44 / 48 hazard frames) |
-| **Specificity** | **97.06%** (33 / 34 clean frames) |
+|---|---:|
+| **Decision Accuracy** | **93.90% (77/82)** |
+| **Violation Precision** | **97.78% (44/45)** |
+| **Violation Recall / Sensitivity** | **91.67% (44/48)** |
+| **Specificity** | **97.06% (33/34)** |
 | **Violation F1-Score** | **94.62%** |
 | **False Positive Rate (FPR)** | **2.94%** |
 | **Missed Hazard Rate (FNR)** | **8.33%** |
 
-#### Worker-Level PPE Compliance Decision (N=174 GT Workers)
+#### Worker-Level PPE Compliance Decision
+
+**Ground Truth Workers: N = 174**
+
 | Metric | Empirical Value |
-|---|---|
+|---|---:|
 | **Worker Decision Accuracy** | **74.21%** |
 | **Worker Violation Precision** | **83.19%** |
 | **Worker Violation Recall** | **75.81%** |
@@ -165,105 +210,143 @@ AEGIS
 
 ---
 
-### 3. CPU Latency & Throughput Benchmark (100 frames)
+### 3. CPU Latency & Throughput Benchmark
+
+**Benchmark Duration: 100 Frames**
 
 | Resolution | Mean FPS | Median FPS | Mean Latency (ms) | P95 Latency (ms) | P99 Latency (ms) | RAM (MB) |
-|---|---|---|---|---|---|---|
+|---|---:|---:|---:|---:|---:|---:|
 | **640 × 640** | 4.91 | 4.83 | 205.85 | 243.23 | 258.40 | 2758.3 |
 | **480 × 480** | 8.17 | 8.42 | 123.44 | 143.67 | 154.20 | 2747.6 |
 | **320 × 320** | 12.48 | 12.43 | 81.23 | 95.27 | 104.80 | 2746.0 |
 
-*Operational Claim:* The system demonstrates near-real-time operation on commodity CPU hardware, reaching **12.48 FPS at 320×320**.
+**Operational Observation:** The system demonstrates near-real-time processing on CPU hardware, achieving a throughput of **12.48 FPS at 320 × 320 resolution**.
 
 ---
 
 ### 4. Error Diagnostics by Object Scale
 
 | Object Scale | Bounding Box Area | GT Count | Detected | Missed | Detection Recall |
-|---|---|---|---|---|---|
-| **Small** | < 32 × 32 px | 328 | 192 | 136 | **58.54%** |
+|---|---|---:|---:|---:|---:|
+| **Small** | Below 32 × 32 px | 328 | 192 | 136 | **58.54%** |
 | **Medium** | 32 × 32 to 96 × 96 px | 195 | 160 | 35 | **82.05%** |
-| **Large** | > 96 × 96 px | 237 | 228 | 9 | **96.20%** |
+| **Large** | Above 96 × 96 px | 237 | 228 | 9 | **96.20%** |
 
-> **Key Operational Limitation:** Distant background workers with sub-32px bounding boxes represent a significant detection challenge (58.54% recall), which explains the performance delta between site-level frame detection (93.90%) and granular worker association (74.21%).
+> **Key Operational Limitation:** Small and distant background workers with bounding boxes below 32 × 32 pixels present a significant detection challenge, with a recall of 58.54%. This contributes to the performance difference between frame-level violation detection (93.90%) and worker-level compliance classification (74.21%).
 
 ---
 
 ## 🚀 Quick Start & Installation
 
 ### Prerequisites
-* Python 3.10, 3.11, or 3.12
-* Git
+
+- Python 3.10, 3.11, or 3.12
+- Git
 
 ### Local Setup
 
+**1. Clone the repository**
+
 ```bash
-# 1. Clone the repository
 git clone https://github.com/lohi0611/Aegis-AI.git
 cd Aegis-AI
+```
 
-# 2. Create and activate a virtual environment
+**2. Create and activate a virtual environment**
+
+```bash
 python -m venv .venv
-# Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# Linux / macOS:
-source .venv/bin/activate
+```
 
-# 3. Install dependencies
+Windows PowerShell:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+Linux / macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+**3. Install dependencies**
+
+```bash
 pip install -r dashboard/requirements.txt
 ```
 
 ### Launching the Application
 
-**Option A: PowerShell One-Click Launcher (Windows)**
+**Option A: PowerShell Launcher (Windows)**
+
 ```powershell
 .\Run_SafetyEye.ps1
 ```
 
 **Option B: Batch Launcher (Windows CMD)**
+
 ```cmd
 run_app.bat
 ```
 
 **Option C: Standard Streamlit Command**
+
 ```bash
 streamlit run app.py
 ```
-Then navigate to **`http://localhost:8501`** in your browser.
+
+Open your browser and navigate to:
+
+```text
+http://localhost:8501
+```
 
 ---
 
 ## 🧪 Testing & Quality Assurance
 
-AEGIS includes an automated unit test suite verifying mathematical metrics, spatial geometry, temporal hysteresis, database persistence, and cryptographic authentication.
+AEGIS includes an automated Pytest suite designed to validate mathematical metrics, spatial geometry, temporal hysteresis, database persistence, and authentication mechanisms.
+
+### Run Tests
 
 ```bash
-# Run the complete test suite with coverage report
 pytest --cov=src --cov-report=term-missing tests/
 ```
 
-### Verification Status:
-* **72 / 72 Passing Tests** (0 failures, 0 regressions)
-* **66.21% Code Coverage** across all core packages (`src/`)
-* Completely CPU-executable — zero GPU required for automated validation
+### Verification Status
+
+- **72/72 Passing Tests**
+- **66.21% Code Coverage** across core packages (`src/`)
+- CPU-executable automated validation without requiring a GPU
 
 ---
 
 ## 🔬 Research Evaluation Suite
 
-Reproduce IEEE paper benchmark metrics using the standalone evaluation scripts:
+The project includes standalone evaluation scripts to reproduce model performance and benchmark results.
+
+**1. Object Detection Evaluation**
 
 ```bash
-# Run YOLOv8 detection mAP@50 and mAP@50-95 evaluation
 python evaluation/evaluate_model.py
+```
 
-# Run frame-level and worker-level safety compliance decision evaluation
+**2. PPE Compliance Evaluation**
+
+```bash
 python evaluation/evaluate_compliance.py
+```
 
-# Benchmark CPU latency, FPS, P95/P99 percentiles, and memory footprint
+**3. CPU Performance Benchmarking**
+
+```bash
 python evaluation/benchmark_realtime.py
+```
 
-# Run object scale sensitivity and spatial error diagnostics
+**4. Object Scale Error Analysis**
+
+```bash
 python evaluation/error_analysis.py
 ```
 
@@ -271,42 +354,50 @@ python evaluation/error_analysis.py
 
 ## 📂 Project Structure
 
-```
+```text
 Aegis-AI/
-├── .github/workflows/          # CI/CD automated test & build workflows
+│
+├── .github/
+│   └── workflows/              # CI/CD workflows
+│
 ├── configs/
-│   └── config.yaml             # System & detector configuration parameters
-├── dashboard/                  # Production Streamlit SaaS application
-│   ├── app.py                  # Main dashboard orchestrator & video engine
-│   ├── db.py                   # Data access layer & auth wrapper
-│   ├── ui_utils.py             # Design system, CSS tokens, and navbars
+│   └── config.yaml             # System configuration
+│
+├── dashboard/
+│   ├── app.py                  # Main Streamlit application
+│   ├── db.py                   # Database and authentication layer
+│   ├── ui_utils.py             # UI components and styling
 │   ├── components/
-│   │   ├── landing.py          # Enterprise SaaS landing page
-│   │   └── auth.py             # Split-screen login / signup & demo mode
+│   │   ├── landing.py          # Landing page
+│   │   └── auth.py             # Authentication interface
 │   ├── pages/
-│   │   ├── 1_complianceStats.py# Historical compliance analytics
-│   │   └── 2_incidentExplorer.py# Forensic incident snapshot browser
-│   └── requirements.txt        # Dashboard runtime dependencies
-├── evaluation/                 # Research evaluation & empirical benchmark suite
-├── src/                        # Core algorithmic package
-│   ├── alerts/                 # Cooldown notification manager
-│   ├── association/            # Spatial worker-PPE association
-│   ├── compliance/             # Rules & temporal hysteresis engine
-│   ├── config/                 # Dynamic YAML configuration loader
-│   ├── database/               # SQLAlchemy ORM models & repository
-│   ├── tracking/               # Centroid tracker implementation
-│   ├── utils/                  # Telemetry & logger utilities
-│   └── video/                  # Video stream processor
-├── tests/                      # Pytest unit test suite (72 tests)
-├── app.py                      # Root deployment forwarder for Streamlit Cloud
-└── LICENSE                     # MIT License
+│   │   ├── 1_complianceStats.py
+│   │   └── 2_incidentExplorer.py
+│   └── requirements.txt
+│
+├── evaluation/                 # Research evaluation scripts
+│
+├── src/                        # Core intelligence modules
+│   ├── alerts/
+│   ├── association/
+│   ├── compliance/
+│   ├── config/
+│   ├── database/
+│   ├── tracking/
+│   ├── utils/
+│   └── video/
+│
+├── tests/                      # Automated test suite
+│
+├── app.py                      # Streamlit deployment entry point
+└── LICENSE
 ```
 
 ---
 
 ## 📜 Citation & Research
 
-If you utilize AEGIS or its evaluation methodology in academic or industrial research, please cite:
+If you use AEGIS or its evaluation methodology in academic or industrial research, please cite:
 
 ```bibtex
 @article{aegis_safety_2026,
@@ -321,4 +412,12 @@ If you utilize AEGIS or its evaluation methodology in academic or industrial res
 
 ## 📄 License
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  <strong>AEGIS — Making Industrial Workplaces Safer Through AI.</strong>
+  <br>
+  Built with Python, YOLOv8, PyTorch, OpenCV, SQLAlchemy, and Streamlit.
+</p>
