@@ -362,20 +362,10 @@ with st.sidebar:
             options=VIOLATION_CLASSES,
             default=st.session_state.adv_alert_classes,
         )
-        st.session_state.adv_cam_idx = st.number_input(
-            "OpenCV Webcam Index", min_value=0, max_value=5,
-            value=st.session_state.get("adv_cam_idx", 0), step=1,
-            help="Camera device index (0 for default built-in webcam, 1 or 2 for external USB camera)"
-        )
-        st.session_state.adv_use_dshow = st.checkbox(
-            "Enhanced webcam access (DirectShow)", value=st.session_state.adv_use_dshow)
-
     # Read advanced settings into local vars used by the rest of the page
     confidence_slider = st.session_state.adv_conf
     line_thickness    = st.session_state.adv_thickness
     alert_classes     = st.session_state.adv_alert_classes or VIOLATION_CLASSES
-    webcam_idx        = int(st.session_state.get("adv_cam_idx", 0))
-    use_dshow         = st.session_state.adv_use_dshow
 
     # ── Start / Stop logic ──────────────────────────────────────────────────
     if start_btn:
@@ -456,29 +446,29 @@ def compute_kpis():
     dur_str   = f"{int(elapsed//60):02d}:{int(elapsed%60):02d}" if st.session_state.scan_start_time else "00:00"
     return breaches, critical, frames, avg_fps, score, dur_str
 
-kpi_cols = st.columns(6)
+kpi_placeholders = [col.empty() for col in st.columns(6)]
 
 def render_kpis(breaches, critical, frames, avg_fps, score, dur_str):
-    with kpi_cols[0]:
+    with kpi_placeholders[0]:
         kpi_card("Violations",    str(breaches),
                  "alert-triangle",
                  "kpi-red" if breaches > 0 else "kpi-green")
-    with kpi_cols[1]:
+    with kpi_placeholders[1]:
         kpi_card("Critical",      str(critical),
                  "x-circle",
                  "kpi-red" if critical > 0 else "kpi-teal")
-    with kpi_cols[2]:
+    with kpi_placeholders[2]:
         kpi_card("Frames scanned", str(frames),   "eye",      "kpi-teal")
-    with kpi_cols[3]:
+    with kpi_placeholders[3]:
         kpi_card("Safety score",
                  f"{score}%",
                  "shield",
                  "kpi-green" if score >= 80 else ("kpi-yellow" if score >= 50 else "kpi-red"))
-    with kpi_cols[4]:
+    with kpi_placeholders[4]:
         kpi_card("Sensor FPS",
                  f"{avg_fps:.1f}" if avg_fps else "Standby",
                  "zap",   "kpi-teal")
-    with kpi_cols[5]:
+    with kpi_placeholders[5]:
         kpi_card("Scan duration", dur_str,         "clock",   "kpi-yellow")
 
 render_kpis(0, 0, 0, 0, 100.0, "00:00")
