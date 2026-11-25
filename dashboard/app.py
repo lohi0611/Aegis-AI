@@ -266,6 +266,15 @@ for k, v in _defaults.items():
 #  ROUTER: LANDING & AUTH FLOW (Protected Gateway)
 # ─────────────────────────────────────────────────────────────────────────────
 if not st.session_state.get("authenticated", False):
+    # Hide sidebar completely on landing & auth pages
+    st.markdown("""
+<style>
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+button[kind="header"] { display: none !important; }
+.main .block-container { padding-left: 2rem !important; padding-right: 2rem !important; max-width: 1200px !important; margin: 0 auto !important; }
+</style>
+""", unsafe_allow_html=True)
     active_view = st.session_state.get("active_view", "landing")
     if active_view in ("login", "signup"):
         render_auth_page(initial_mode=active_view)
@@ -318,12 +327,7 @@ with st.sidebar:
         '① &nbsp;Choose video source</div>',
         unsafe_allow_html=True,
     )
-    sources = ["Laptop Camera (Browser)", "Native Camera (Snapshot/Stream)"]
-    if sample_video:
-        sources.append("Sample Video")
-    sources.append("Upload Video File")
-    if not _IS_CLOUD:                          # no /dev/video0 on Streamlit Cloud
-        sources.append("Local Webcam (OpenCV)")
+    sources = ["Laptop Camera (Browser)", "Upload Video File"]
     video_source = st.selectbox("Video source", sources, label_visibility="collapsed")
 
     uploaded_file = None
@@ -376,16 +380,11 @@ with st.sidebar:
     # ── Start / Stop logic ──────────────────────────────────────────────────
     if start_btn:
         source_map = {
-            "Laptop Camera (Browser)":         "laptop_camera",
-            "Native Camera (Snapshot/Stream)": "native_camera",
-            "Sample Video":                    "sample_video",
-            "Upload Video File":               "uploaded_video",
-            "Local Webcam (OpenCV)":           "local_webcam",
+            "Laptop Camera (Browser)": "laptop_camera",
+            "Upload Video File":       "uploaded_video",
         }
         scan_type   = source_map.get(video_source, "unknown")
-        source_name = (uploaded_file.name if uploaded_file
-                       else ("browser_camera" if "Camera" in video_source
-                             else (os.path.basename(sample_video) if sample_video else "unknown")))
+        source_name = (uploaded_file.name if uploaded_file else "browser_camera")
 
         db_sid = create_scan_session(scan_type, source_name)
 
@@ -955,64 +954,89 @@ if st.session_state.running:
                 )
 
     else:
-        # OpenCV / Video Sources
-        if not CV2_OK:
-            err_detail = f": {_CV2_ERR_MSG}" if _CV2_ERR_MSG else ""
-            st.error(f"⚠️ Video file decoding requires OpenCV{err_detail}. "
-                     "Please switch video source to 'Laptop Camera (Browser)' which runs directly without OpenCV.")
+        # ── Upload Video File — PIL/imageio fallback (no OpenCV / libGL needed) ──
+        if not uploaded_file:
+            st.warning("⚠️ Please upload a video file (.mp4 / .avi / .mov) using the sidebar uploader.")
             st.session_state.running = False
             st.stop()
-        detector = _load_detector(confidence_slider)
-        if not st.session_state.get("_model_warm"):
-            with st.spinner("⛑ Loading AEGIS detection model — this takes ~20 s on first run…"):
-                detector = _load_detector(confidence_slider)
-            st.session_state["_model_warm"] = True
 
-        # Resolve capture source
-        cap_src = None
-        if video_source == "Sample Video" and sample_video:
-            cap_src = sample_video
-        elif video_source == "Upload Video File":
-            if uploaded_file:
-                tmp = tempfile.NamedTemporaryFile(
-                    delete=False, suffix=os.path.splitext(uploaded_file.name)[1])
-                tmp.write(uploaded_file.read())
-                tmp.close()
-                cap_src = tmp.name
-            else:
-                st.warning("Please upload a video file to begin.")
-                st.session_state.running = False
-                st.stop()
-        elif video_source == "Local Webcam (OpenCV)":
-            cap_src = int(st.session_state.get("adv_cam_idx", 0))
+        with st.spinner("⛑ Loading AEGIS detection model…"):
+            detector = _load_detector(confidence_slider)
 
-        if cap_src is None:
-            if sample_video:
-                cap_src = sample_video
-                st.info("Using sample video for demonstration.")
-            else:
-                st.warning("Please upload a video file or select a valid source.")
-                st.session_state.running = False
-                st.stop()
+        # Save upload to a temp file
+        _ext = os.path.splitext(uploaded_file.name)[1].lower()
+        _tmp = tempfile.NamedTemporaryFile(delete=False, suffix=_ext)
+        _tmp.write(uploaded_file.read())
+        _tmp.close()
+        cap_src = _tmp.name
 
-        # Open capture
-        cap = None
-        if isinstance(cap_src, int):
-            if use_dshow:
-                cap = cv2.VideoCapture(cap_src, cv2.CAP_DSHOW)
-            if cap is None or not cap.isOpened():
-                cap = cv2.VideoCapture(cap_src)
+        # ── Try to open with OpenCV first; fall back to imageio / av ─────────
+        def _iter_frames_cv2(path):
+            """Yield (ndarray RGB) frames via OpenCV."""
+            cap = cv2.VideoCapture(path)
+            if not cap.isOpened():
+                cap.release()
+                return
+            try:
+                while True:
+                    ret, bgr = cap.read()
+                    if not ret:
+                        break
+                    yield cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+            finally:
+                cap.release()
+
+        def _iter_frames_imageio(path):
+            """Yield (ndarray RGB) frames via imageio (no OpenCV dependency)."""
+            try:
+                import imageio  # type: ignore
+                reader = imageio.get_reader(path, "ffmpeg")
+                try:
+                    for frame in reader:
+                        yield np.array(frame)[:, :, :3]   # drop alpha if present
+                finally:
+                    reader.close()
+            except Exception as _e:
+                st.error(f"❌ Could not decode video: {_e}\n\nTip: install `imageio[ffmpeg]` or `av` in requirements.txt.")
+                return
+
+        def _iter_frames_av(path):
+            """Yield (ndarray RGB) frames via PyAV — pure Python, no libGL."""
+            try:
+                import av  # type: ignore
+                container = av.open(path)
+                for packet in container.demux(video=0):
+                    for frame in packet.decode():
+                        yield frame.to_ndarray(format="rgb24")
+                container.close()
+            except Exception as _e:
+                st.error(f"❌ Could not decode video with av: {_e}")
+                return
+
+        # Choose iterator: cv2 → imageio → av
+        if CV2_OK:
+            frame_iter = _iter_frames_cv2(cap_src)
         else:
-            cap = cv2.VideoCapture(cap_src)
+            # Try imageio first
+            try:
+                import imageio  # type: ignore  # noqa
+                frame_iter = _iter_frames_imageio(cap_src)
+            except ImportError:
+                try:
+                    import av  # type: ignore  # noqa
+                    frame_iter = _iter_frames_av(cap_src)
+                except ImportError:
+                    st.error(
+                        "❌ **No video decoder available.**\n\n"
+                        "OpenCV is unavailable (`libGL.so.1` missing on this system).\n"
+                        "To fix, add **`imageio[ffmpeg]`** or **`av`** to `requirements.txt` and redeploy.\n\n"
+                        "For now, please switch to **Laptop Camera (Browser)** in the dropdown."
+                    )
+                    st.session_state.running = False
+                    st.stop()
 
-        if not cap.isOpened() and cap_src != sample_video and sample_video:
-            st.info("Local webcam not available. Falling back to sample video.")
-            cap = cv2.VideoCapture(sample_video)
-
-        if not cap.isOpened():
-            st.error(f"Unable to open video stream from source (index: {cap_src}). Please ensure camera is connected and not occupied by another app.")
-            st.session_state.running = False
-            st.stop()
+        with cctv_header_ph:
+            render_cctv_hud_header(source_name=uploaded_file.name, is_live=False, fps_val=0.0)
 
         local_run_id = st.session_state.current_run_id
         prev_time    = time.time()
@@ -1025,38 +1049,21 @@ if st.session_state.running:
         tracker = st.session_state.tracker
 
         try:
-            while cap.isOpened() and st.session_state.running:
+            for rgb in frame_iter:
                 if local_run_id != st.session_state.current_run_id:
                     break
-
-                ret, frame = cap.read()
-                if not ret:
+                if not st.session_state.running:
                     break
 
                 total_frames += 1
                 st.session_state.total_frames_scanned = total_frames
 
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-                # ── Performance: cap resolution on cloud before inference ─────────
-                if _IS_CLOUD:
-                    rgb = cv2.resize(rgb, (640, 480))
-
-                # ── Performance: skip inference on even frames on cloud ───────────
-                if _IS_CLOUD and total_frames % 2 == 0:
-                    if "last_annotated_frame" in st.session_state and st.session_state.last_annotated_frame is not None:
-                        if total_frames % 6 == 0:  # still refresh display every 6 frames
-                            refresh_ui(st.session_state.last_annotated_frame, fps,
-                                       total_frames, fps_history, time_history)
-                    continue
-
                 annotated, detections = detector.detect(rgb, line_width=line_thickness,
                                                         alert_classes=alert_classes)
                 st.session_state.last_annotated_frame = annotated
 
-
-                rects       = [d["bbox"] for d in detections]
-                class_names = [d["class_name"] for d in detections]
+                rects        = [d["bbox"] for d in detections]
+                class_names  = [d["class_name"] for d in detections]
                 assigned_ids = tracker.update(rects, class_names)
 
                 for idx, d in enumerate(detections):
@@ -1064,7 +1071,6 @@ if st.session_state.running:
                         w_id = assigned_ids[idx] if idx < len(assigned_ids) else "Unknown"
                         log_violation(tracker, w_id, d, total_frames, annotated)
 
-                # FPS
                 now = time.time()
                 fps = 1.0 / max(1e-6, now - prev_time)
                 prev_time = now
@@ -1073,15 +1079,18 @@ if st.session_state.running:
                 st.session_state.fps_history  = list(fps_history)
                 st.session_state.time_history = list(time_history)
 
-                # Render every 3 frames to reduce overhead
+                # Refresh UI every 3 frames
                 if total_frames % 3 == 0 or total_frames == 1:
                     refresh_ui(annotated, fps, total_frames, fps_history, time_history)
 
                 time.sleep(0.005)
 
         finally:
-            cap.release()
-            # Mark DB session complete
+            # Clean up temp file
+            try:
+                os.unlink(cap_src)
+            except Exception:
+                pass
             if st.session_state.db_session_id is not None:
                 close_scan_session(
                     st.session_state.db_session_id,

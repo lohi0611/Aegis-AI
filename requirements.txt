@@ -11,3 +11,4 @@ SQLAlchemy>=2.0.0
 gdown
 pytest
 pyyaml
+imageio[ffmpeg]
